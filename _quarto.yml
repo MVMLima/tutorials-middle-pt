@@ -5,6 +5,11 @@ project:
   resources:
     - data
 
+lang: pt-BR
+
+language:
+  appendices: "Apêndices"
+
 book:
   title: "Análise em tempo real e previsão para surtos com R"
   subtitle: "Atrasos, número de reprodução, previsão, gravidade e superspreading"
