@@ -1,10 +1,20 @@
 # Perfil usado APENAS no GitHub Actions (quarto render --profile ci).
 #
-# `freeze: true` faz o build reaproveitar os resultados já calculados em `_freeze/`
-# mesmo quando um .qmd muda. Sem isso, editar só o TEXTO de uma lição faria o CI
-# tentar executar o código R — e o runner do GitHub não tem R nem os pacotes.
+# `freeze: true` faz o build reaproveitar o resultado já congelado em `_freeze/`
+# em vez de executar o código R — necessário porque o runner do GitHub não tem R
+# nem os pacotes do Epiverse instalados.
 #
-# Consequência: se você mudar CÓDIGO R, rode `quarto render` na sua máquina e
-# commite o `_freeze/` junto; o CI sozinho não executa código.
+# O QUE ISSO NÃO FAZ (verificado na prática, não é o que a intuição sugere):
+# `freeze: true` também NÃO regenera o HTML de um arquivo cujo .qmd mudou. Se você
+# editar só o texto de uma lição e der push sem renderizar localmente, o CI fica
+# verde e publica a versão antiga daquela página.
+#
+# Por isso o workflow roda `scripts/freshness.py --check` antes do render: ele
+# compara a impressão digital de cada .qmd com a do último render local e falha
+# com instrução de correção, em vez de publicar conteúdo velho em silêncio.
+#
+# Regra: mudou QUALQUER COISA em um .qmd (texto ou código) -> rode
+# `quarto render && python3 scripts/freshness.py --update` e commite junto,
+# incluindo o `_freeze/` atualizado.
 execute:
   freeze: true

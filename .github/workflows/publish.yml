@@ -22,10 +22,14 @@ jobs:
 
       # O site é renderizado a partir do cache em `_freeze/` (commitado no repositório),
       # por isso o build não precisa do R nem dos pacotes do Epiverse no CI.
-      # O perfil `ci` (_quarto-ci.yml) liga `freeze: true`, que reaproveita os resultados
-      # já calculados mesmo quando um .qmd muda — sem ele, editar só o TEXTO de um episódio
-      # faria o CI tentar executar o R e o runner não tem R instalado.
-      # Regra: mudou CÓDIGO R -> rode `quarto render` localmente e commite o _freeze/ junto.
+      # O perfil `ci` (_quarto-ci.yml) liga `freeze: true`. ATENÇÃO ao que isso implica,
+      # verificado na prática: `freeze: true` reaproveita o resultado congelado e NÃO
+      # regenera o HTML de um arquivo cujo .qmd mudou. Ou seja, editar só o TEXTO de uma
+      # lição e dar push sem renderizar localmente publica a versão ANTIGA, com build verde.
+      # O passo abaixo transforma essa falha silenciosa em erro explícito.
+      - name: Conferir se o site publicado ficaria desatualizado
+        run: python3 scripts/freshness.py --check
+
       - name: Renderizar o site
         run: quarto render --profile ci
 
