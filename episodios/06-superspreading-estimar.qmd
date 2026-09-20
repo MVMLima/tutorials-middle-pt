@@ -12,7 +12,7 @@ webshot::install_phantomjs(force = TRUE)
 Ao renderizar este episódio, o `{webshot}` renderiza o grafo interativo em imagem e deixa dois
 arquivos na raiz do projeto: `network.html` (o grafo navegável) e `webshot.png` (a imagem usada no
 texto). Eles são **efeito colateral** do render, não material do curso — estão no `.gitignore`. A
-primeira execução também baixa o PhantomJS, o que exige conexão com a internet.
+primeira execução também baixa o PhantomJS, o que exige conexão com a internet. TESTE-DA-GUARDA
 
 :::
 
