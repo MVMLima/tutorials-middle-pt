@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Criar previsão de curto prazo – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../episodios/05-severidade-estatica.html" rel="next">
+<link href="../episodios/03-funcoes-de-atraso.html" rel="prev">
+<link href="../img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../episodios/04-criar-previsoes.html"><span class="chapter-title">Criar previsão de curto prazo</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#introdução" id="toc-introdução" class="nav-link active" data-scroll-target="#introdução">Introdução</a></li>
+  <li><a href="#criar-uma-previsão-de-curto-prazo" id="toc-criar-uma-previsão-de-curto-prazo" class="nav-link" data-scroll-target="#criar-uma-previsão-de-curto-prazo">Criar uma previsão de curto prazo</a>
+  <ul class="collapse">
+  <li><a href="#previsão-com-observações-incompletas" id="toc-previsão-com-observações-incompletas" class="nav-link" data-scroll-target="#previsão-com-observações-incompletas">Previsão com observações incompletas</a></li>
+  </ul></li>
+  <li><a href="#previsão-de-observações-secundárias" id="toc-previsão-de-observações-secundárias" class="nav-link" data-scroll-target="#previsão-de-observações-secundárias">Previsão de observações secundárias</a></li>
+  <li><a href="#desafio-análise-do-surto-de-ebola" id="toc-desafio-análise-do-surto-de-ebola" class="nav-link" data-scroll-target="#desafio-análise-do-surto-de-ebola">Desafio: análise do surto de Ebola</a></li>
+  <li><a href="#resumo" id="toc-resumo" class="nav-link" data-scroll-target="#resumo">Resumo</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/04-criar-previsoes.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Criar previsão de curto prazo</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled" title="Perguntas">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Perguntas
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Como criar previsões de curto prazo a partir de dados de casos?</li>
+<li>Como levar em conta a notificação incompleta em previsões?</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Objetivos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Objetivos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Aprender a fazer previsões de casos usando o pacote R <code>{EpiNow2}</code></li>
+<li>Aprender a incluir um processo de observação na estimativa</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<section id="pré-requisitos" class="level2 callout-body-container callout-body">
+<h2 class="anchored" data-anchor-id="pré-requisitos">Pré-requisitos</h2>
+<ul>
+<li>Concluir o tutorial <a href="../episodios/02-quantificar-transmissibilidade.html">Quantificar transmissibilidade</a></li>
+</ul>
+<p>Recomenda-se que as pessoas participantes se familiarizem com os seguintes conceitos antes de trabalhar neste tutorial:</p>
+<p><strong>Estatística</strong>: distribuições de probabilidade, princípios de <a href="../glossario.html#bayesian">análise bayesiana</a>.</p>
+<p><strong>Teoria epidêmica</strong>: <a href="../glossario.html#effectiverepro">Número de reprodução efetivo</a>.</p>
+</section>
+</div>
+<section id="introdução" class="level2">
+<h2 class="anchored" data-anchor-id="introdução">Introdução</h2>
+<p>A partir de dados de casos de uma epidemia, podemos gerar estimativas do número atual e futuro de casos levando em conta tanto os atrasos de notificação quanto a subnotificação. Para fazer previsões sobre o curso futuro da epidemia, precisamos assumir uma premissa sobre como as observações até o presente se relacionam com o que esperamos que aconteça no futuro. A maneira mais simples de fazer isso é assumir “nenhuma mudança”, ou seja, que o número de reprodução permanece no futuro o mesmo observado mais recentemente. Neste tutorial, criaremos <a href="../glossario.html#forecast">previsões</a> de curto prazo assumindo que o número de reprodução permanecerá igual à sua estimativa na data final para a qual havia dados disponíveis.</p>
+<p>Neste tutorial, aprenderemos como usar o pacote <code>{EpiNow2}</code> para prever casos levando em conta observações incompletas e prever observações secundárias, como óbitos.</p>
+<p>Usaremos o operador pipe <code>%&gt;%</code> para conectar funções, portanto vamos também carregar o pacote <code>{tidyverse}</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(EpiNow2)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="os-dois-pontos-duplos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="os-dois-pontos-duplos">Os dois-pontos duplos</h3>
+<p>Os dois-pontos duplos <code>::</code> no R permitem chamar uma função específica de um pacote sem carregar todo o pacote no ambiente atual.</p>
+<p>Por exemplo, <code>dplyr::filter(data, condition)</code> usa <code>filter()</code> do pacote <code>{dplyr}</code>.</p>
+<p>Isso nos ajuda a lembrar as funções dos pacotes e a evitar conflitos de espaço de nomes (<em>namespaces</em>).</p>
+</section>
+</div>
+</section>
+<section id="criar-uma-previsão-de-curto-prazo" class="level2">
+<h2 class="anchored" data-anchor-id="criar-uma-previsão-de-curto-prazo">Criar uma previsão de curto prazo</h2>
+<p>A função <code>epinow()</code> descrita no episódio <a href="../episodios/02-quantificar-transmissibilidade.html">quantificar transmissibilidade</a> é um encapsulador (<em>wrapper</em>) para as funções:</p>
+<ul>
+<li><code>estimate_infections()</code>, usada para estimar casos por data de infecção.</li>
+<li><code>forecast_infections()</code>, usada para simular infecções usando um ajuste existente (estimativa) aos casos observados.</li>
+</ul>
+<p>Vamos usar o mesmo código utilizado no episódio <a href="../episodios/02-quantificar-transmissibilidade.html">quantificar transmissibilidade</a> para obter os dados de entrada, atrasos e prioris:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ler conjunto de dados de casos</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>cases <span class="ot">&lt;-</span> incidence2<span class="sc">::</span>covidregionaldataUK <span class="sc">%&gt;%</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {tidyr} para pré-processar valores ausentes</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">replace_na</span>(base<span class="sc">::</span><span class="fu">list</span>(<span class="at">cases_new =</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {incidence2} para calcular a incidência diária</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">incidence</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_index =</span> <span class="st">"date"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> <span class="st">"cases_new"</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">count_values_to =</span> <span class="st">"confirm"</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_names_to =</span> <span class="st">"date"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">complete_dates =</span> <span class="cn">TRUE</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>count_variable)  <span class="co"># Descartar count_variable pois não é mais necessária</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Período de incubação</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>incubation_period_fixed <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Gamma</span>(</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean =</span> <span class="dv">4</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd =</span> <span class="dv">2</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">20</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Média transformada em escala logarítmica</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>log_mean <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">convert_to_logmean</span>(<span class="at">mean =</span> <span class="dv">2</span>, <span class="at">sd =</span> <span class="dv">1</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Desvio padrão transformado em escala logarítmica</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>log_sd <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">convert_to_logsd</span>(<span class="at">mean =</span> <span class="dv">2</span>, <span class="at">sd =</span> <span class="dv">1</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Atraso de notificação</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>reporting_delay_fixed <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">LogNormal</span>(</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean =</span> log_mean,</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd =</span> log_sd,</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">10</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Tempo de geração</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>generation_time_fixed <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">LogNormal</span>(</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean =</span> <span class="fl">3.6</span>,</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd =</span> <span class="fl">3.1</span>,</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">20</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co"># definir a distribuição a priori de Rt</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>rt_prior <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">rt_opts</span>(<span class="at">prior =</span> EpiNow2<span class="sc">::</span><span class="fu">LogNormal</span>(<span class="at">mean =</span> <span class="dv">2</span>, <span class="at">sd =</span> <span class="dv">2</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Agora podemos extrair a previsão de curto prazo usando:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Supor que temos apenas os primeiros 90 dias destes dados</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>reported_cases <span class="ot">&lt;-</span> cases <span class="sc">%&gt;%</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">90</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar e prever</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>estimates <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">epinow</span>(</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> reported_cases,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> EpiNow2<span class="sc">::</span><span class="fu">generation_time_opts</span>(generation_time_fixed),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">delays =</span> EpiNow2<span class="sc">::</span><span class="fu">delay_opts</span>(incubation_period_fixed <span class="sc">+</span> reporting_delay_fixed),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">rt =</span> rt_prior</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Não espere a conclusão desta etapa!
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Este último bloco de código pode levar 10 minutos para rodar. Continue lendo este episódio do tutorial enquanto ele é executado em segundo plano. Para mais informações sobre o tempo de computação, leia a seção “Inferência bayesiana usando Stan” no episódio <a href="../episodios/02-quantificar-transmissibilidade.html">quantificar transmissibilidade</a>.</p>
+</div>
+</div>
+<p>Podemos visualizar as estimativas do número de reprodução efetivo e o número estimado de casos usando <code>plot()</code>. As estimativas são divididas em três categorias:</p>
+<ul>
+<li><p><strong>Estimate</strong> (verde): utiliza todos os dados,</p></li>
+<li><p><strong>Estimate based on partial data</strong> (laranja): contém maior grau de incerteza porque essas estimativas são baseadas em menos dados,</p></li>
+<li><p><strong>Forecast</strong> (roxo): projeta para o futuro.</p></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(estimates)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="04-criar-previsoes_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="previsão-com-observações-incompletas" class="level3">
+<h3 class="anchored" data-anchor-id="previsão-com-observações-incompletas">Previsão com observações incompletas</h3>
+<p>No episódio <a href="../episodios/02-quantificar-transmissibilidade.html">quantificar transmissibilidade</a>, levamos em conta os atrasos de notificação. No <code>EpiNow2</code>, também podemos levar em conta observações incompletas, já que, na realidade, 100% dos casos não são notificados. Passaremos um argumento adicional chamado <code>obs</code> para a função <code>epinow()</code> para definir um modelo de observação. O formato de <code>obs</code> é definido pela função <code>obs_opt()</code> (veja <code>?EpiNow2::obs_opts</code> para mais detalhes).</p>
+<div class="callout callout-style-default callout-note callout-titled" title="No Brasil: subnotificação e atraso de digitação">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>No Brasil: subnotificação e atraso de digitação
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A subnotificação varia muito conforme o agravo e o nível de atenção: casos leves podem passar fora do sistema, enquanto internações por SRAG ficam registradas no SIVEP-Gripe (<a href="https://dadosabertos.saude.gov.br/dataset/srag-2019-a-2026">Portal de Dados Abertos do SUS — SIVEP-Gripe</a>). Como a base continua sendo atualizada, as semanas mais recentes ainda estão incompletas — e num modelo com fator de escala isso se confunde facilmente com queda real de transmissão. Escolher o <code>scale</code> com base em dados incompletos enviesa a previsão para baixo.</p>
+</div>
+</div>
+<p>Suponhamos que acreditamos que os dados do surto de COVID-19 no objeto <code>cases</code> não incluem todos os casos notificados. Estimamos que apenas 40% dos casos reais são notificados. Para especificar isso no modelo de observação, devemos passar um fator de escala com média e desvio padrão. Se assumirmos que 40% dos casos são notificados (com desvio padrão de 1%), especificamos a entrada <code>scale</code> para <code>obs_opts()</code> da seguinte forma:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>obs_scale <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="fl">0.4</span>, <span class="at">sd =</span> <span class="fl">0.01</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Para rodar a estrutura de inferência com este processo de observação, adicionamos <code>obs = obs_opts(scale = obs_scale)</code> aos argumentos de entrada de <code>epinow()</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir modelo de observação</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>obs_scale <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="fl">0.4</span>, <span class="at">sd =</span> <span class="fl">0.01</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Supor que temos apenas os primeiros 90 dias destes dados</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>reported_cases <span class="ot">&lt;-</span> cases <span class="sc">%&gt;%</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">90</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar e prever</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>estimates <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">epinow</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> reported_cases,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> EpiNow2<span class="sc">::</span><span class="fu">generation_time_opts</span>(generation_time_fixed),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">delays =</span> EpiNow2<span class="sc">::</span><span class="fu">delay_opts</span>(incubation_period_fixed <span class="sc">+</span> reporting_delay_fixed),</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">rt =</span> rt_prior,</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Adicionar modelo de observação</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs =</span> EpiNow2<span class="sc">::</span><span class="fu">obs_opts</span>(<span class="at">scale =</span> obs_scale)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>base<span class="sc">::</span><span class="fu">summary</span>(estimates)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        measure                 estimate
+                         &lt;char&gt;                   &lt;char&gt;
+1:       New infections per day   19969 (13094 -- 30159)
+2:   Expected change in reports                   Stable
+3:   Effective reproduction no.       0.97 (0.76 -- 1.2)
+4:               Rate of growth -0.012 (-0.096 -- 0.066)
+5: Doubling/halving time (days)         -59 (10 -- -7.2)</code></pre>
+</div>
+</div>
+<p>As estimativas de medidas de transmissão, como o número de reprodução efetivo e a taxa de crescimento, são semelhantes (ou idênticas em valor) em comparação a quando não levamos em conta observações incompletas (veja o <a href="../episodios/02-quantificar-transmissibilidade.html">episódio quantificar transmissibilidade</a> na seção “Obter estimativas”). No entanto, o número de novos casos confirmados por data de infecção mudou substancialmente em magnitude para refletir a premissa de que apenas 40% dos casos são notificados.</p>
+<p>Também podemos alterar a distribuição padrão de Binomial Negativa para Poisson, remover o efeito padrão de dia da semana (que leva em conta padrões semanais na notificação) e muito mais. Veja <code>?EpiNow2::obs_opts</code> para mais detalhes.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="No Brasil: efeito de dia da semana">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>No Brasil: efeito de dia da semana
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Antes de ajustar o modelo, olhe o gráfico da sua série diária. Oscilação em “dente de serra” é comum em bases de notificação e costuma vir de represamento de digitação em fins de semana e feriados, seguido de concentração de lançamentos nos dias úteis.</p>
+<p>O efeito de dia da semana do modelo existe justamente para absorver esse padrão. Conferir o gráfico é o que diz se ele é necessário no seu caso — e um resíduo em dente de serra depois do ajuste costuma indicar que o termo não foi suficiente.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="quais-são-as-implicações-desta-alteração" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="quais-são-as-implicações-desta-alteração">Quais são as implicações desta alteração?</h3>
+<ul>
+<li>Compare diferentes porcentagens de observações %</li>
+<li>Como elas diferem no número de infecções estimadas?</li>
+<li>Quais são as implicações desta alteração para a saúde pública?</li>
+</ul>
+</section>
+</div>
+</section>
+</section>
+<section id="previsão-de-observações-secundárias" class="level2">
+<h2 class="anchored" data-anchor-id="previsão-de-observações-secundárias">Previsão de observações secundárias</h2>
+<p>O <code>EpiNow2</code> também tem a capacidade de estimar e prever observações secundárias, por exemplo, óbitos e internações, a partir de uma observação primária, por exemplo, casos. Aqui ilustraremos como prever o número de óbitos decorrentes dos casos observados de COVID-19 nas fases iniciais do surto no Reino Unido.</p>
+<p>Primeiro, devemos formatar nossos dados para que tenham as seguintes colunas:</p>
+<ul>
+<li><code>date</code>: a data (como um objeto de data, veja <code>?is.Date()</code>),</li>
+<li><code>primary</code>: número de observações primárias nessa data, neste exemplo <strong>casos</strong>,</li>
+<li><code>secondary</code>: número de observações secundárias nessa data, neste exemplo <strong>óbitos</strong>.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>reported_cases_deaths <span class="ot">&lt;-</span> incidence2<span class="sc">::</span>covidregionaldataUK <span class="sc">%&gt;%</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {tidyr} para pré-processar valores ausentes</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">replace_na</span>(base<span class="sc">::</span><span class="fu">list</span>(<span class="at">cases_new =</span> <span class="dv">0</span>, <span class="at">deaths_new =</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {incidence2} para calcular a incidência diária</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">incidence</span>(</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_index =</span> <span class="st">"date"</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> <span class="fu">c</span>(<span class="at">primary =</span> <span class="st">"cases_new"</span>, <span class="at">secondary =</span> <span class="st">"deaths_new"</span>),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_names_to =</span> <span class="st">"date"</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">complete_dates =</span> <span class="cn">TRUE</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># reorganizar para formato largo (wide) para {EpiNow2}</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> count_variable, <span class="at">values_from =</span> count)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="04-criar-previsoes_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption>Distribution of secondary cases (deaths). We will drop the first 30 days with no observed deaths. We will use the deaths between day 31 and day 60 to estimate the secondary observations. We will forecast deaths from day 61 to day 90.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Utilizando os dados de casos e óbitos entre o dia 31 e o dia 60, estimaremos a relação entre as observações primárias e secundárias usando <code>estimate_secondary()</code> e, em seguida, preveremos os óbitos futuros usando <code>forecast_secondary()</code>. Para mais detalhes sobre o modelo, consulte a <a href="https://epiforecasts.io/EpiNow2/dev/articles/estimate_secondary.html">documentação do modelo</a>.</p>
+<p>Devemos especificar o tipo de observação usando <code>type</code> em <code>secondary_opts()</code>; as opções incluem:</p>
+<ul>
+<li>“incidence”: as observações secundárias decorrem de observações primárias anteriores, isto é, óbitos decorrentes dos casos registrados.</li>
+<li>“prevalence”: as observações secundárias decorrem de uma combinação de observações primárias atuais e observações secundárias passadas, isto é, a ocupação de leitos hospitalares decorrente de internações hospitalares atuais e da ocupação passada de leitos.</li>
+</ul>
+<p>Neste exemplo, especificamos <code>secondary_opts(type = "incidence")</code>. Veja <code>?EpiNow2::secondary_opts</code> para mais detalhes.</p>
+<p>A última entrada fundamental é a distribuição de atraso entre as observações primárias e secundárias. Aqui, trata-se do atraso entre a notificação do caso e o óbito; assumimos que ele segue uma distribuição gama com média de 14 dias e desvio padrão de 5 dias (como alternativa, podemos usar <code>{epiparameter}</code> para <a href="https://epiverse-trace.github.io/tutorials-early/delays-reuse.html">acessar atrasos epidemiológicos</a>). Usando <code>Gamma()</code>, especificamos uma distribuição gama fixa.</p>
+<p>Há outras entradas da função <code>estimate_secondary()</code> que podem ser especificadas, incluindo a adição de um processo de observação; veja <code>?EpiNow2::estimate_secondary</code> para detalhes sobre essas opções.</p>
+<p>Para encontrar o ajuste do modelo entre casos e óbitos:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar do dia 31 ao dia 60 destes dados</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>cases_to_estimate <span class="ot">&lt;-</span> reported_cases_deaths <span class="sc">%&gt;%</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">31</span><span class="sc">:</span><span class="dv">60</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Distribuição de atraso entre notificação de caso e óbitos</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>delay_report_to_death <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Gamma</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="dv">14</span>, <span class="at">sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="dv">5</span>, <span class="at">sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">30</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar casos secundários</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>estimate_cases_to_deaths <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">estimate_secondary</span>(</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> cases_to_estimate,</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">secondary =</span> EpiNow2<span class="sc">::</span><span class="fu">secondary_opts</span>(<span class="at">type =</span> <span class="st">"incidence"</span>),</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">delays =</span> EpiNow2<span class="sc">::</span><span class="fu">delay_opts</span>(delay_report_to_death)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Tenha cautela com a escala temporal
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Nas fases iniciais de um surto, podem ocorrer mudanças substanciais na testagem e na notificação. Se houver mudanças na testagem de um mês para o outro, haverá um viés no ajuste do modelo. Portanto, você deve ter cautela com a escala temporal dos dados utilizados no ajuste do modelo e na previsão.</p>
+</div>
+</div>
+<p>Plotamos o ajuste do modelo (faixas sombreadas) com as observações secundárias (gráfico de barras) e as observações primárias (linha pontilhada) da seguinte forma:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(estimate_cases_to_deaths, <span class="at">primary =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 14 rows containing missing values or values outside the scale range
+(`geom_ribbon()`).
+Removed 14 rows containing missing values or values outside the scale range
+(`geom_ribbon()`).
+Removed 14 rows containing missing values or values outside the scale range
+(`geom_ribbon()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="04-criar-previsoes_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Para usar esse ajuste do modelo na previsão de óbitos, passamos um data frame composto pela observação primária (casos) para as datas que não foram utilizadas no ajuste do modelo.</p>
+<p><em>Nota: neste episódio, estamos usando dados em que conhecemos os óbitos e os casos, de modo que criamos um data frame extraindo os casos. Mas, na prática, este seria um conjunto de dados diferente composto apenas por casos.</em></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prever do dia 61 ao dia 90</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>cases_to_forecast <span class="ot">&lt;-</span> reported_cases_deaths <span class="sc">%&gt;%</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">slice</span>(<span class="dv">61</span><span class="sc">:</span><span class="dv">90</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">value =</span> primary)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Para realizar a previsão, usamos o ajuste do modelo <code>estimate_cases_to_deaths</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prever casos secundários</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>deaths_forecast <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">forecast_secondary</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">estimate =</span> estimate_cases_to_deaths,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">primary =</span> cases_to_forecast</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(deaths_forecast)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="04-criar-previsoes_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>O gráfico mostra as observações secundárias (óbitos) previstas ao longo das datas para as quais temos casos registrados. Também é possível prever óbitos utilizando previsões de casos; nesse caso, você especificaria <code>primary</code> como a saída <code>estimates</code> de <code>estimate_infections()</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Intervalos de credibilidade
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Em todas as figuras de saída do <code>{EpiNow2}</code>, as regiões sombreadas refletem intervalos de credibilidade de 90%, 50% e 20%, do mais claro ao mais escuro.</p>
+</div>
+</div>
+</section>
+<section id="desafio-análise-do-surto-de-ebola" class="level2">
+<h2 class="anchored" data-anchor-id="desafio-análise-do-surto-de-ebola">Desafio: análise do surto de Ebola</h2>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Baixe o arquivo <a href="../data/ebola_cases.csv"><code>ebola_cases.csv</code></a> e leia-o no R. Os dados simulados consistem na data de início dos sintomas e no número de casos confirmados nas fases iniciais do surto de Ebola em Serra Leoa em 2014.</p>
+<p>Usando os primeiros 3 meses (120 dias) de dados: 1. Estimar se os casos estão aumentando ou diminuindo no dia 120 do surto 2. Levar em conta uma capacidade de observar 80% dos casos. 2. Criar uma previsão de duas semanas do número de casos. Você pode usar os seguintes valores de parâmetros para a(s) distribuição(ões) de atraso e a distribuição do tempo de geração:</p>
+<ul>
+<li>Período de incubação: Log-normal<span class="math inline">\((2.487,0.330)\)</span> (<a href="https://doi.org/10.1016/j.phrp.2011.04.001">Eichner et al.&nbsp;2011</a> via <code>{epiparameter}</code>)</li>
+<li>Tempo de geração: Gama<span class="math inline">\((15.3, 10.1)\)</span> (<a href="https://www.nejm.org/doi/full/10.1056/NEJMoa1411100">WHO Ebola Response Team 2014</a>)</li>
+</ul>
+<p>Você pode incluir alguma incerteza em torno da média e do desvio padrão dessas distribuições.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Usamos o número de reprodução efetivo e a taxa de crescimento para estimar se os casos estão aumentando ou diminuindo.</p>
+<p>Podemos usar o argumento <code>horizon</code> dentro de <code>forecast_opts()</code>, fornecido ao argumento <code>forecast</code> na função <code>epinow()</code>, para estender o período de tempo da previsão. O valor padrão é de sete dias.</p>
+<p>Certifique-se de que os dados estejam no formato correto:</p>
+<ul>
+<li><code>date</code>: a data (como um objeto de data, veja <code>?is.Date()</code>),</li>
+<li><code>confirm</code>: número de casos confirmados nessa data.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-12" class="callout-12-contents callout-collapse collapse">
+<section id="solução" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="solução">Solução</h3>
+<p>Para estimar o número de reprodução efetivo e a taxa de crescimento, usaremos a função <code>epinow()</code>.</p>
+<p>Como os dados consistem na data de início dos sintomas, precisamos apenas especificar uma distribuição de atraso para o período de incubação e o tempo de geração.</p>
+<p>Especificamos as distribuições com alguma incerteza em torno da média e do desvio padrão da distribuição log-normal para o período de incubação e da distribuição gama para o tempo de geração.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"incubation"</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">parameter_tbl</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Parameter table:
+# A data frame:    5 × 7
+  disease           pathogen epi_name prob_distribution author  year sample_size
+  &lt;chr&gt;             &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;             &lt;chr&gt;  &lt;dbl&gt;       &lt;dbl&gt;
+1 Ebola Virus Dise… Ebola V… incubat… lnorm             Eichn…  2011         196
+2 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015        1798
+3 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015          49
+4 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015         957
+5 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015         792</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>ebola_eichner <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"incubation"</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">author =</span> <span class="st">"Eichner"</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>ebola_eichner_parameters <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">get_parameters</span>(ebola_eichner)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>ebola_incubation_period <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">LogNormal</span>(</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">meanlog =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> ebola_eichner_parameters[<span class="st">"meanlog"</span>],</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd =</span> <span class="fl">0.5</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">sdlog =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> ebola_eichner_parameters[<span class="st">"sdlog"</span>],</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd =</span> <span class="fl">0.5</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">20</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>ebola_generation_time <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Gamma</span>(</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="fl">15.3</span>, <span class="at">sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd =</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="fl">10.1</span>, <span class="at">sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">max =</span> <span class="dv">30</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Lemos os dados de entrada usando <code>readr::read_csv()</code>. Esta função reconhece que a coluna <code>date</code> é um vetor de classe <code>&lt;date&gt;</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ler dados</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ex.: se o caminho para o arquivo for data/raw-data/ebola_cases.csv, então:</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>ebola_cases_raw <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data"</span>, <span class="st">"raw-data"</span>, <span class="st">"ebola_cases.csv"</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Pré-processar e adaptar os dados brutos para o <code>{EpiNow2}</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>ebola_cases <span class="ot">&lt;-</span> ebola_cases_raw <span class="sc">%&gt;%</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {tidyr} para pré-processar valores ausentes</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">replace_na</span>(base<span class="sc">::</span><span class="fu">list</span>(<span class="at">confirm =</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar {incidence2} para calcular a incidência diária</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">incidence</span>(</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_index =</span> <span class="st">"date"</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> <span class="st">"confirm"</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">count_values_to =</span> <span class="st">"confirm"</span>,</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_names_to =</span> <span class="st">"date"</span>,</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">complete_dates =</span> <span class="cn">TRUE</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>count_variable)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">as_tibble</span>(ebola_cases)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 123 × 2
+   date       confirm
+   &lt;date&gt;       &lt;dbl&gt;
+ 1 2014-05-18       1
+ 2 2014-05-19       0
+ 3 2014-05-20       2
+ 4 2014-05-21       4
+ 5 2014-05-22       6
+ 6 2014-05-23       1
+ 7 2014-05-24       2
+ 8 2014-05-25       0
+ 9 2014-05-26      10
+10 2014-05-27       8
+# ℹ 113 more rows</code></pre>
+</div>
+</div>
+<p>Definimos um modelo de observação para ajustar a escala do número estimado e previsto de novas infecções:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir modelo de observação</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># média de 80% e desvio padrão de 1%</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>ebola_obs_scale <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">Normal</span>(<span class="at">mean =</span> <span class="fl">0.8</span>, <span class="at">sd =</span> <span class="fl">0.01</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Como queremos criar também uma previsão de duas semanas, especificamos <code>horizon = 14</code> para prever 14 dias em vez dos 7 dias padrão.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>ebola_estimates <span class="ot">&lt;-</span> EpiNow2<span class="sc">::</span><span class="fu">epinow</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ebola_cases <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">120</span>), <span class="co"># apenas os primeiros 3 meses de dados</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> EpiNow2<span class="sc">::</span><span class="fu">generation_time_opts</span>(ebola_generation_time),</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">delays =</span> EpiNow2<span class="sc">::</span><span class="fu">delay_opts</span>(ebola_incubation_period),</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Adicionar modelo de observação</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs =</span> EpiNow2<span class="sc">::</span><span class="fu">obs_opts</span>(<span class="at">scale =</span> ebola_obs_scale),</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># o horizonte precisa ser de 14 dias para criar uma previsão de duas semanas (o padrão é 7 dias)</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">forecast =</span> EpiNow2<span class="sc">::</span><span class="fu">forecast_opts</span>(<span class="at">horizon =</span> <span class="dv">14</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ebola_estimates)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        measure               estimate
+                         &lt;char&gt;                 &lt;char&gt;
+1:       New infections per day     114 (51 -- 713214)
+2:   Expected change in reports             Increasing
+3:   Effective reproduction no.        1.8 (1.2 -- 10)
+4:               Rate of growth 0.053 (0.0085 -- 0.13)
+5: Doubling/halving time (days)         13 (5.3 -- 82)</code></pre>
+</div>
+</div>
+<p>A estimativa do número de reprodução efetivo <span class="math inline">\(R_t\)</span> (na última data dos dados) é 1.8 (1.2 – 10). A taxa de crescimento exponencial do número de casos é 0.053 (0.0085 – 0.13).</p>
+<p>Visualizar as estimativas:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ebola_estimates)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Previsão com estimativas de <span class="math inline">\(R_t\)</span>
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Por padrão, as previsões de curto prazo são criadas utilizando a estimativa mais recente do número de reprodução <span class="math inline">\(R_t\)</span>. Como essa estimativa é baseada em dados parciais, ela apresenta incerteza considerável.</p>
+<p>O número de reprodução projetado para o futuro pode ser alterado para uma estimativa menos recente baseada em mais dados usando <code>rt_opts()</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>EpiNow2<span class="sc">::</span><span class="fu">rt_opts</span>(<span class="at">future =</span> <span class="st">"estimate"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>O resultado serão previsões com menor incerteza (pois são baseadas em um <span class="math inline">\(R_t\)</span> com um intervalo de incerteza mais estreito), mas as previsões serão baseadas em estimativas menos recentes de <span class="math inline">\(R_t\)</span> e assumirão que não houve mudanças desde então.</p>
+<p>Além disso, há a opção de <a href="../glossario.html#projection">projetar</a> o valor de <span class="math inline">\(R_t\)</span> para o futuro usando um modelo genérico, definindo <code>future = "project"</code>. Como essa opção utiliza um modelo para prever o valor de <span class="math inline">\(R_t\)</span>, o resultado serão previsões com maior incerteza do que com <code>estimate</code>; para um exemplo, <a href="https://epiforecasts.io/EpiNow2/dev/articles/estimate_infections_options.html#projecting-the-reproduction-number-with-the-gaussian-process">veja aqui</a>.</p>
+</div>
+</div>
+</section>
+<section id="resumo" class="level2">
+<h2 class="anchored" data-anchor-id="resumo">Resumo</h2>
+<p>O <code>{EpiNow2}</code> pode ser usado para criar previsões de curto prazo e para estimar a relação entre diferentes desfechos. Há uma variedade de opções de modelo que podem ser implementadas para diferentes análises, incluindo a adição de um processo de observação para levar em conta a notificação incompleta. Consulte a <a href="https://epiforecasts.io/EpiNow2/dev/articles/estimate_infections_options.html">vinheta</a> para mais detalhes sobre diferentes opções de modelo no <code>{EpiNow2}</code> que não são abordadas nestes tutoriais.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Pontos-chave">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Pontos-chave
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Podemos criar previsões de curto prazo assumindo premissas sobre o comportamento futuro do número de reprodução</li>
+<li>A notificação incompleta de casos pode ser levada em conta nas estimativas</li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../episodios/03-funcoes-de-atraso.html" class="pagination-link" aria-label="Usar distribuições de atraso na análise">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Usar distribuições de atraso na análise</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../episodios/05-severidade-estatica.html" class="pagination-link" aria-label="Estimativa da gravidade de um surto">
+        <span class="nav-page-text"><span class="chapter-title">Estimativa da gravidade de um surto</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/04-criar-previsoes.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

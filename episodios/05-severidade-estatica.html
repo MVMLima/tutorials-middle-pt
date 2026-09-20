@@ -1,0 +1,2236 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Estimativa da gravidade de um surto – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../episodios/06-superspreading-estimar.html" rel="next">
+<link href="../episodios/04-criar-previsoes.html" rel="prev">
+<link href="../img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../episodios/05-severidade-estatica.html"><span class="chapter-title">Estimativa da gravidade de um surto</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#introdução" id="toc-introdução" class="nav-link active" data-scroll-target="#introdução">Introdução</a></li>
+  <li><a href="#fontes-de-dados-para-gravidade-clínica" id="toc-fontes-de-dados-para-gravidade-clínica" class="nav-link" data-scroll-target="#fontes-de-dados-para-gravidade-clínica">Fontes de dados para gravidade clínica</a></li>
+  <li><a href="#cfr-ingênuo" id="toc-cfr-ingênuo" class="nav-link" data-scroll-target="#cfr-ingênuo">CFR ingênuo</a></li>
+  <li><a href="#vieses-que-afetam-a-estimativa-do-cfr" id="toc-vieses-que-afetam-a-estimativa-do-cfr" class="nav-link" data-scroll-target="#vieses-que-afetam-a-estimativa-do-cfr">Vieses que afetam a estimativa do CFR</a></li>
+  <li><a href="#cfr-ajustado-pelo-atraso" id="toc-cfr-ajustado-pelo-atraso" class="nav-link" data-scroll-target="#cfr-ajustado-pelo-atraso">CFR ajustado pelo atraso</a></li>
+  <li><a href="#uma-estimativa-de-cfr-em-estágio-inicial" id="toc-uma-estimativa-de-cfr-em-estágio-inicial" class="nav-link" data-scroll-target="#uma-estimativa-de-cfr-em-estágio-inicial">Uma estimativa de CFR em estágio inicial</a></li>
+  <li><a href="#desafios" id="toc-desafios" class="nav-link" data-scroll-target="#desafios">Desafios</a></li>
+  <li><a href="#apêndice" id="toc-apêndice" class="nav-link" data-scroll-target="#apêndice">Apêndice</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/05-severidade-estatica.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Estimativa da gravidade de um surto</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled" title="Perguntas">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Perguntas
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><p>Por que estimamos a gravidade clínica de uma epidemia?</p></li>
+<li><p>Como o risco de letalidade (CFR) pode ser estimado no início de uma epidemia em curso?</p></li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Objetivos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Objetivos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><p>Estimar o CFR a partir de dados agregados de casos usando <code>{cfr}</code>.</p></li>
+<li><p>Estimar um CFR ajustado pelo atraso usando <code>{epiparameter}</code> e <code>{cfr}</code>.</p></li>
+<li><p>Estimar uma gravidade ajustada pelo atraso para uma série temporal em expansão usando <code>{cfr}</code>.</p></li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<section id="pré-requisitos" class="level2 callout-body-container callout-body">
+<h2 class="anchored" data-anchor-id="pré-requisitos">Pré-requisitos</h2>
+<p>Este episódio requer que você esteja familiarizado com:</p>
+<p><strong>Ciência de dados</strong>: Programação básica com R.</p>
+<p><strong>Teoria epidêmica</strong>: <a href="../glossario.html#delaydist">Distribuições de atraso</a>.</p>
+<p><strong>Pacotes de R instalados</strong>: <code>{cfr}</code>, <code>{epiparameter}</code>, <code>{outbreaks}</code>, <code>{tidyverse}</code>.</p>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Instale os pacotes caso ainda não estejam instalados</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>base<span class="sc">::</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">"cfr"</span>, <span class="st">"epiparameter"</span>, <span class="st">"tidyverse"</span>, <span class="st">"outbreaks"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Se você encontrar alguma mensagem de erro, acesse a <a href="../setup.html#software-setup">página principal de configuração</a>.</p>
+</div>
+</div>
+</div>
+<section id="introdução" class="level2">
+<h2 class="anchored" data-anchor-id="introdução">Introdução</h2>
+<p>Perguntas comuns na fase inicial de uma epidemia incluem:</p>
+<ul>
+<li>Qual é o provável impacto do surto na saúde pública em termos de gravidade clínica?</li>
+<li>Quais são os grupos mais gravemente afetados?</li>
+<li>O surto tem potencial para causar uma pandemia muito grave?</li>
+</ul>
+<p>Podemos avaliar o potencial pandêmico de uma epidemia com duas medidas críticas: a transmissibilidade e a gravidade clínica (<a href="https://www.science.org/doi/full/10.1126/science.1176062">Fraser et al., 2009</a>, <a href="https://www.cdc.gov/pandemic-flu/php/national-strategy/severity-assessment-framework.html">CDC, 2024</a>).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-hhs-scenarios-psaf.png" class="img-fluid figure-img"></p>
+<figcaption>Cenários de Planejamento Pandêmico do HHS baseados no Pandemic Severity Assessment Framework. Utiliza uma medida combinada de gravidade clínica e transmissibilidade para caracterizar cenários de pandemia de influenza. <strong>HHS</strong>: Departamento de Saúde e Serviços Humanos dos Estados Unidos (<a href="https://archive.cdc.gov/www_cdc_gov/flu/pandemic-resources/national-strategy/severity-assessment-framework-508.html">CDC, 2016</a>).</figcaption>
+</figure>
+</div>
+<p>Uma abordagem epidemiológica para estimar a gravidade clínica é quantificar o risco de letalidade (CFR). O CFR é a probabilidade condicional de óbito dado o diagnóstico confirmado, calculada como a razão entre o número cumulativo de óbitos por uma doença infecciosa e o número de casos confirmados diagnosticados. No entanto, calcular isso diretamente durante o curso de uma epidemia tende a resultar em um CFR ingênuo ou viesado, devido ao <a href="../glossario.html#delaydist">atraso</a> de tempo entre o início dos sintomas e o óbito, variando substancialmente à medida que a epidemia progride e estabilizando-se nos estágios finais do surto (<a href="https://academic.oup.com/aje/article/162/5/479/82647?login=false#620743">Ghani et al., 2005</a>).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-pone.0006852.g003-fig_c.png" class="img-fluid figure-img"></p>
+<figcaption>Estimativas observadas e viesadas do risco de letalidade de casos confirmados (CFR) em função do tempo (linha espessa) calculadas como o número cumulativo de óbitos sobre os casos confirmados no tempo t. A estimativa ao final de um surto (~30 de maio) é o CFR realizado até o final da epidemia. A linha contínua horizontal e as linhas pontilhadas mostram o valor esperado e os intervalos de confiança de 95% (<span class="math inline">\(95\%\)</span> CI) da estimativa predita do CFR ajustado pelo atraso usando apenas os dados observados até 27 de março de 2003 (<a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a>)</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Os períodos são relevantes: Período 1 – 15 dias em que o CFR é zero para indicar que isso se deve à ausência de óbitos notificados; Período de 15 de março a 26 de abril em que o CFR parece estar aumentando; Período de 30 de abril a 30 de maio em que a estimativa do CFR se estabiliza.</p>
+</div>
+</div>
+</div>
+<p>De modo mais geral, estimar a gravidade pode ser útil mesmo fora de um cenário de planejamento pandêmico e no contexto da rotina de saúde pública. Saber se um surto tem ou teve uma gravidade diferente do registro histórico pode motivar investigações causais, que poderiam ser intrínsecas ao agente infeccioso (por exemplo, uma nova cepa mais grave) ou devidas a fatores subjacentes na população (por exemplo, imunidade reduzida ou fatores de morbidade) (<a href="https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0003846">Lipsitch et al., 2015</a>).</p>
+<p>Neste tutorial, aprenderemos a usar o pacote <code>{cfr}</code> para calcular e ajustar uma estimativa de CFR usando <a href="../glossario.html#delaydist">distribuições de atraso</a> do <code>{epiparameter}</code> ou de outras fontes, com base nos métodos desenvolvidos por <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a>. Também exploraremos como podemos reutilizar funções do <code>{cfr}</code> para outras medidas de gravidade.</p>
+<p>Usaremos o operador pipe <code>%&gt;%</code> do pacote <code>{magrittr}</code> para encadear funções do <code>{cfr}</code>, incluindo outras do pacote <code>{dplyr}</code>. Portanto, carregaremos o pacote <code>{tidyverse}</code>, que contém tanto o <code>{magrittr}</code> quanto o <code>{dplyr}</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># carregar pacotes</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cfr)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="os-dois-pontos-duplos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="os-dois-pontos-duplos">Os dois-pontos duplos</h3>
+<p>Os dois-pontos duplos <code>::</code> no R permitem chamar uma função específica de um pacote sem carregar o pacote inteiro no ambiente atual.</p>
+<p>Por exemplo, <code>dplyr::filter(data, condition)</code> usa a função <code>filter()</code> do pacote <code>{dplyr}</code>.</p>
+<p>Isso nos ajuda a lembrar as funções dos pacotes e a evitar conflitos de namespace.</p>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Você já fez parte de uma equipe de resposta a epidemias? Se sim:</p>
+<ul>
+<li>Como você avaliou a gravidade clínica do surto?</li>
+<li>Quais foram as principais fontes de viés?</li>
+<li>O que você fez para levar em conta o viés identificado?</li>
+<li>Que análise complementar você faria para resolver o viés?</li>
+</ul>
+</div>
+</div>
+</section>
+<section id="fontes-de-dados-para-gravidade-clínica" class="level2">
+<h2 class="anchored" data-anchor-id="fontes-de-dados-para-gravidade-clínica">Fontes de dados para gravidade clínica</h2>
+<p>Que fontes de dados podemos usar para estimar a gravidade clínica de um surto de doença? <a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30243-7/fulltext">Verity et al., 2020</a> resumem o espectro de casos de COVID-19:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-spectrum-cases-covid19.jpg" class="img-fluid figure-img"></p>
+<figcaption>Espectro de casos de COVID-19. O CFR visa estimar a proporção de óbitos entre os casos confirmados em uma epidemia (<a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30243-7/fulltext#gr1">Verity et al., 2020</a>)</figcaption>
+</figure>
+</div>
+<ul>
+<li>No topo da pirâmide, aqueles que atenderam aos critérios de definição de caso da OMS para casos <strong>graves</strong> ou <strong>críticos</strong> provavelmente teriam sido identificados no ambiente hospitalar, apresentando pneumonia viral atípica. Esses casos teriam sido identificados na China continental e entre aqueles classificados internacionalmente como transmissão local.</li>
+<li>Muito mais casos provavelmente serão <strong>sintomáticos</strong> (ou seja, com febre, tosse ou mialgia), mas podem não necessitar de internação. Esses casos teriam sido identificados por meio de vínculos com viagens internacionais para áreas de alto risco e pelo rastreamento de contatos de casos confirmados. Eles poderiam ser identificáveis por meio da vigilância populacional de, por exemplo, síndrome gripal.</li>
+<li>A parte inferior da pirâmide representa casos <strong>leves</strong> (e possivelmente <strong>assintomáticos</strong>). Esses casos poderiam ser identificáveis pelo rastreamento de contatos e, posteriormente, por meio de testes sorológicos.</li>
+</ul>
+</section>
+<section id="cfr-ingênuo" class="level2">
+<h2 class="anchored" data-anchor-id="cfr-ingênuo">CFR ingênuo</h2>
+<p>Medimos a gravidade da doença em termos de risco de letalidade (CFR). O CFR é interpretado como a probabilidade condicional de óbito dado o diagnóstico confirmado, calculada como a razão entre o número cumulativo de óbitos <span class="math inline">\(D_{t}\)</span> e o número cumulativo de casos confirmados <span class="math inline">\(C_{t}\)</span> em um determinado tempo <span class="math inline">\(t\)</span>. Podemos nos referir a ele como <em>CFR ingênuo</em> (também CFR bruto ou viesado, <span class="math inline">\(b_{t}\)</span>):</p>
+<p><span class="math display">\[ naive \, CFR = b_{t} =  \frac{D_{t}}{C_{t}} \]</span></p>
+<p>Esse cálculo é <em>ingênuo</em> porque tende a produzir um CFR viesado e predominantemente subestimado devido ao atraso de tempo entre o início dos sintomas e o óbito, estabilizando-se apenas nos estágios mais avançados do surto.</p>
+<p>Para calcular o CFR ingênuo, o pacote <code>{cfr}</code> requer um data frame de entrada com três colunas chamadas:</p>
+<ul>
+<li><code>date</code></li>
+<li><code>cases</code></li>
+<li><code>deaths</code></li>
+</ul>
+<p>Vamos explorar o conjunto de dados <code>ebola1976</code>, incluído no {cfr}, que provém do primeiro surto de Ebola no Zaire (atual República Democrática do Congo) em 1976, conforme analisado por Camacho et al.&nbsp;(2014).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Carregar os dados de Ebola de 1976 fornecidos com o pacote {cfr}</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"ebola1976"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plotar a incidência de casos e notificações de óbitos</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>ebola1976 <span class="sc">%&gt;%</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">incidence</span>(</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_index =</span> <span class="st">"date"</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> <span class="fu">c</span>(<span class="st">"cases"</span>, <span class="st">"deaths"</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="05-severidade-estatica_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Enquadraremos este episódio no contexto de um <strong>surto em curso</strong> com apenas os <strong>primeiros 30 dias</strong> de dados observados (escolhidos aqui para fins ilustrativos, não sendo uma etapa obrigatória).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Supor que temos apenas os primeiros 30 dias destes dados</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>ebola_30days <span class="ot">&lt;-</span> ebola1976 <span class="sc">%&gt;%</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">slice_head</span>(<span class="at">n =</span> <span class="dv">30</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">as_tibble</span>()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>ebola_30days</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 30 × 3
+   date       cases deaths
+   &lt;date&gt;     &lt;int&gt;  &lt;int&gt;
+ 1 1976-08-25     1      0
+ 2 1976-08-26     0      0
+ 3 1976-08-27     0      0
+ 4 1976-08-28     0      0
+ 5 1976-08-29     0      0
+ 6 1976-08-30     0      0
+ 7 1976-08-31     0      0
+ 8 1976-09-01     1      0
+ 9 1976-09-02     1      0
+10 1976-09-03     1      0
+# ℹ 20 more rows</code></pre>
+</div>
+</div>
+<p>Em uma análise em tempo real, use sempre os dados mais recentes disponíveis no momento.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Precisamos de dados agregados de incidência
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>O <code>{cfr}</code> lê dados de incidência <strong>agregados</strong>.</p>
+<!-- Similar ao `{EpiNow2}`, com a diferença de que para o `{cfr}` precisamos de mais uma coluna chamada `deaths`. -->
+<p>Esses dados de entrada devem ser <strong>agregados</strong> por dia, o que significa uma observação <em>por dia</em>, contendo o número <em>diário</em> de casos e óbitos notificados. Observações com valores iguais a zero ou ausentes também devem ser incluídas, como em todos os dados de séries temporais.</p>
+<p>Além disso, o <code>{cfr}</code> atualmente funciona apenas para dados <em>diários</em>, mas não para outras unidades temporais de agregação de dados, por exemplo, semanas.</p>
+<!-- sugerir formas de lidar com dados de incidência semanal -->
+<!-- https://github.com/epiverse-trace/cfr/issues/117 -->
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ao agregar casos por dia com o <code>{incidence2}</code>, você pode adaptar os dados para o <code>{cfr}</code> usando <code>cfr::prepare_data()</code> em objetos <code>&lt;incidence2&gt;</code>. Para detalhes e um exemplo, consulte o manual de referência do <code>{cfr}</code> sobre <a href="https://epiverse-trace.github.io/cfr/reference/prepare_data.html">preparação de formatos comuns de dados epidemiológicos para estimativa de CFR</a>.</p>
+</div>
+</div>
+<p>Quando aplicamos <code>cfr_static()</code> diretamente a <code>data</code>, estamos calculando o CFR ingênuo:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calcular o CFR ingênuo para os primeiros 30 dias</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>cfr<span class="sc">::</span><span class="fu">cfr_static</span>(<span class="at">data =</span> ebola_30days)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  severity_estimate severity_low severity_high
+1         0.4740741    0.3875497     0.5617606</code></pre>
+</div>
+</div>
+<p>O CFR ingênuo estima a gravidade geral da doença, considerando os <em>dados mais recentes disponíveis no momento</em>, como 0.4740741 com um intervalo de confiança de 95% entre 0.3875497 e 0.5617606.</p>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Baixe o arquivo <a href="../data/sarscov2_cases_deaths.csv">sarscov2_cases_deaths.csv</a> e leia-o no R.</p>
+<p>Estime o CFR ingênuo.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Inspecione o formato dos dados de entrada.</p>
+<ul>
+<li>Contém dados diários?</li>
+<li>Os nomes das colunas coincidem com os exigidos por <code>cfr_static()</code>?</li>
+<li>Como você renomearia as colunas em um data frame?</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Lemos os dados de entrada usando <code>readr::read_csv()</code>. Esta função reconhece que a coluna <code>date</code> é um vetor de classe <code>&lt;date&gt;</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ler dados</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ex.: se o caminho para o arquivo for data/raw-data/ebola_cases.csv, então:</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>sarscov2_input <span class="ot">&lt;-</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  readr<span class="sc">::</span><span class="fu">read_csv</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data"</span>, <span class="st">"raw-data"</span>, <span class="st">"sarscov2_cases_deaths.csv"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspecionar os dados</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sarscov2_input</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 93 × 3
+   date       cases_jpn deaths_jpn
+   &lt;date&gt;         &lt;dbl&gt;      &lt;dbl&gt;
+ 1 2020-01-20         1          0
+ 2 2020-01-21         1          0
+ 3 2020-01-22         0          0
+ 4 2020-01-23         1          0
+ 5 2020-01-24         1          0
+ 6 2020-01-25         3          0
+ 7 2020-01-26         3          0
+ 8 2020-01-27         4          0
+ 9 2020-01-28         6          0
+10 2020-01-29         7          0
+# ℹ 83 more rows</code></pre>
+</div>
+</div>
+<p>Podemos usar <code>dplyr::rename()</code> para adaptar os dados externos ao formato de entrada para <code>cfr::cfr_static()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Renomear colunas antes de estimar o CFR ingênuo</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sarscov2_input <span class="sc">%&gt;%</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cases =</span> cases_jpn,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">deaths =</span> deaths_jpn</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  cfr<span class="sc">::</span><span class="fu">cfr_static</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  severity_estimate severity_low severity_high
+1        0.01895208   0.01828832    0.01963342</code></pre>
+</div>
+</div>
+<p>O CFR ingênuo estima a gravidade geral da doença, considerando os <em>dados mais recentes disponíveis no momento</em>, como 0.0189521 com um intervalo de confiança de 95% entre 0.0182883 e 0.0196334.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="vieses-que-afetam-a-estimativa-do-cfr" class="level2">
+<h2 class="anchored" data-anchor-id="vieses-que-afetam-a-estimativa-do-cfr">Vieses que afetam a estimativa do CFR</h2>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="dois-vieses-que-afetam-a-estimativa-do-cfr" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="dois-vieses-que-afetam-a-estimativa-do-cfr">Dois vieses que afetam a estimativa do CFR</h3>
+<p><a href="https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0003846">Lipsitch et al., 2015</a> descrevem dois vieses potenciais que podem afetar a estimativa do CFR (e suas possíveis soluções):</p>
+</section>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-14" class="callout-14-contents callout-collapse collapse">
+<section id="detecção-preferencial-de-casos-graves" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="detecção-preferencial-de-casos-graves">1. Detecção preferencial de casos graves</h3>
+<p>Para doenças com um <em>espectro</em> de manifestações clínicas, os casos que chegam à atenção das autoridades de saúde pública e são registrados nas bases de dados de vigilância serão normalmente aqueles com sintomas mais graves, que procuram assistência médica, são internados em hospitais ou vão a óbito.</p>
+<p>Portanto, o CFR será tipicamente mais alto entre os <em>casos detectados</em> do que entre toda a população de casos, visto que esta última pode incluir indivíduos com quadros leves, subclínicos e (sob algumas definições de “caso”) assintomáticos.</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
+<section id="viés-decorrente-do-atraso-na-notificação-de-óbitos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="viés-decorrente-do-atraso-na-notificação-de-óbitos">2. Viés decorrente do atraso na notificação de óbitos</h3>
+<p>Durante uma epidemia <em>em curso</em>, há um atraso entre o momento em que alguém morre e o momento em que esse óbito é notificado. Portanto, em qualquer momento no tempo, a lista de casos inclui pessoas que morrerão e cujo óbito ainda não ocorreu ou ocorreu, mas ainda não foi notificado. Assim, dividir o número cumulativo de óbitos notificados pelo número cumulativo de casos notificados em um momento específico durante um surto subestimará o verdadeiro CFR.</p>
+<p>Os principais determinantes da magnitude do viés são a <em>taxa de crescimento</em> epidêmico e a <em>distribuição dos atrasos</em> entre a notificação do caso e a notificação do óbito; quanto maiores os atrasos e mais rápida a taxa de crescimento, maior o viés.</p>
+<p>Neste episódio do tutorial, vamos nos concentrar em soluções para lidar com esse viés específico usando o <code>{cfr}</code>!</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
+<section id="estudo-de-caso-influenza-a-h1n1-méxico-2009" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="estudo-de-caso-influenza-a-h1n1-méxico-2009">Estudo de caso: Influenza A (H1N1), México, 2009</h3>
+<p>Aprimorar uma avaliação epidemiológica <em>precoce</em> de um CFR ajustado pelo atraso é crucial para determinar a virulência, orientar o nível e as escolhas de intervenções de saúde pública e fornecer orientações à população em geral.</p>
+<p>Em 2009, durante o surto de gripe suína causado pelo vírus Influenza A (H1N1), o México teve uma estimativa inicial viesada do CFR. Relatórios iniciais do governo mexicano sugeriam uma infecção virulenta, enquanto, em outros países, o mesmo vírus era percebido como brando (<a href="https://content.time.com/time/health/article/0,8599,1894534,00.html">TIME, 2009</a>).</p>
+<p>Nos EUA e no Canadá, nenhum óbito foi atribuído ao vírus nos primeiros dez dias após a declaração de emergência de saúde pública pela Organização Mundial da Saúde. Mesmo sob circunstâncias semelhantes no estágio inicial da pandemia global, autoridades de saúde pública, tomadores de decisão e o público geral precisam conhecer a virulência de um agente infeccioso emergente.</p>
+<p><a href="https://www.bmj.com/content/339/bmj.b2840">Garske et al., 2009</a> avaliam os desafios para estimar a gravidade dessa pandemia, enfatizando que capturar adequadamente os casos para o denominador pode melhorar a capacidade de obter estimativas informativas do CFR.</p>
+</section>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Podemos demonstrar esse último viés usando o <a href="https://epiverse-trace.github.io/cfr/articles/cfr.html#concept-how-reporting-delays-bias-cfr-estimates">conceito descrito nesta vinheta do <code>{cfr}</code></a>.</p>
+<!-- criar código e depois um .gif? -->
+</div>
+</div>
+</div>
+</section>
+<section id="cfr-ajustado-pelo-atraso" class="level2">
+<h2 class="anchored" data-anchor-id="cfr-ajustado-pelo-atraso">CFR ajustado pelo atraso</h2>
+<p><a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a> desenvolveram um método que considera o <strong>atraso de tempo</strong> entre o início dos sintomas e o óbito.</p>
+<p>Surtos em tempo real podem ter um número de óbitos insuficiente para determinar a distribuição de tempo entre o início dos sintomas e o óbito. Portanto, podemos estimar a <em>distribuição de atraso</em> a partir de surtos históricos ou reutilizar distribuições acessíveis por meio de pacotes do R como o <code>{epiparameter}</code> ou o <a href="https://github.com/mrc-ide/epireview/">epireview</a>, que as compilam a partir da literatura científica publicada. Para um guia passo a passo, leia o episódio do tutorial sobre como <a href="../episodios/01-acessar-atrasos.html">acessar atrasos epidemiológicos</a>.</p>
+<p>Vamos usar o <code>{epiparameter}</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Obter a distribuição de atraso</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>onset_to_death_ebola <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"Ebola"</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"onset_to_death"</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Plotar o objeto &lt;epiparameter&gt;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(onset_to_death_ebola, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="05-severidade-estatica_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Para calcular o CFR ajustado pelo atraso, podemos usar a função <code>cfr_static()</code> com os argumentos <code>data</code> e <code>delay_density</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calcular o CFR ajustado pelo atraso</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co"># para os primeiros 30 dias</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>cfr<span class="sc">::</span><span class="fu">cfr_static</span>(</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ebola_30days,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(onset_to_death_ebola, x)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  severity_estimate severity_low severity_high
+1            0.9502        0.881        0.9861</code></pre>
+</div>
+</div>
+<p>O CFR ajustado pelo atraso estima a gravidade geral da doença, considerando os <em>dados mais recentes disponíveis no momento</em>, como 0.9502 com um intervalo de confiança de 95% entre 0.881 e 0.9861, substancialmente maior do que a estimativa ingênua. Esse valor mais alto reflete a correção para os óbitos que ainda serão notificados entre os casos observados nos primeiros 30 dias.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="como-o-cfr-funciona" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="como-o-cfr-funciona">Como o {cfr} funciona?</h3>
+<p>Se quiser se familiarizar e aprender como os atrasos são levados em conta ao estimar o CFR, você pode ler o episódio sobre <a href="../notas/ajuste-cfr-atrasos.html">Como ajustar o CFR para atrasos</a> na seção “Mais Recursos” do site deste tutorial.</p>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-19-contents" aria-controls="callout-19" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-19" class="callout-19-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="por-que-density-é-expressa-como-uma-função-de-x" class="level3">
+<h3 class="anchored" data-anchor-id="por-que-density-é-expressa-como-uma-função-de-x">Por que density() é expressa como uma função de x?</h3>
+<p>Primeiro, leia o guia sobre <a href="../notas/ajuste-cfr-atrasos.html">Como ajustar o CFR para atrasos</a>. Opcionalmente, revise a definição de função densidade de probabilidade (FDP ou PDF) no episódio sobre <a href="../episodios/01-acessar-atrasos.html">Uso de distribuições de atraso em análises</a>.</p>
+<p>Você verá que o cálculo central é obter o <strong>número total esperado de casos com desfechos conhecidos até o tempo <code>t</code></strong>. Isso visa levar em conta o fato de que uma fração dos casos recentes ainda não teve tempo suficiente para evoluir para óbito/recuperação. Isso é expresso pelo termo:</p>
+<p><span class="math display">\[
+\sum_{j = 0}^t\sum_{i = 0}^j c_i f_{j - i}
+\]</span></p>
+<p>onde:</p>
+<ul>
+<li><span class="math inline">\(i\)</span>: o dia em que os casos ocorreram (o dia da incidência).</li>
+<li><span class="math inline">\(j\)</span>: o dia até o qual os desfechos esperados estão sendo acumulados (o dia cumulativo).</li>
+<li><span class="math inline">\(j - i\)</span>: o atraso entre a incidência e o desfecho, ou seja, o número de dias decorridos desde que os casos no dia <span class="math inline">\(i\)</span> ocorreram.</li>
+<li><span class="math inline">\(c_i\)</span> é o número de novos casos confirmados no dia i</li>
+<li><span class="math inline">\(f_s\)</span> é a função densidade de probabilidade condicional para o atraso de <span class="math inline">\(s\)</span> dias, do início dos sintomas ao óbito, dado o óbito.</li>
+</ul>
+<p>Para cada dia cumulativo <span class="math inline">\(j\)</span> até <span class="math inline">\(t\)</span>, somam-se os casos incidentes <span class="math inline">\(c_i\)</span> ao longo de todos os dias de início dos sintomas <span class="math inline">\(i\)</span> até <span class="math inline">\(j\)</span>, ponderando cada um por <span class="math inline">\(f_{j-i}\)</span>, a probabilidade de o desfecho ocorrer <span class="math inline">\(j-i\)</span> dias após a incidência.</p>
+<p>Para cada dia <code>i</code>, o <code>{cfr}</code> calcula o <strong>número esperado de desfechos</strong> decorrentes dos novos casos incidentes observados naquele dia: os desfechos esperados “no” dia <code>i</code>. Esses desfechos esperados por dia são então somados cumulativamente ao longo de todo o histórico até o tempo <code>t</code> para obter o <strong>número total esperado de desfechos “até” o tempo <code>t</code></strong>.</p>
+<section id="primeiro-passo-o-número-esperado-de-desfechos-no-dia-i" class="level4">
+<h4 class="anchored" data-anchor-id="primeiro-passo-o-número-esperado-de-desfechos-no-dia-i">Primeiro passo: o número esperado de desfechos no dia i</h4>
+<p>Ao usar objetos da classe <code>&lt;epiparameter&gt;</code>, a função <code>density()</code> pode ser aplicada para obter a função densidade de probabilidade correspondente para casos incidentes “no” dia <code>i</code>.</p>
+<p>Por exemplo, no dia 0, os desfechos esperados são iguais a:</p>
+<ul>
+<li><span class="math inline">\(c_0 \times (f_0)\)</span>: o número de casos incidentes no dia 0 multiplicado pela densidade no dia 0.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Até o Dia 0, os desfechos esperados são:</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>ebola_30days<span class="sc">$</span>cases[<span class="dv">1</span>] <span class="sc">*</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">0</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+<p>Observe que <code>ebola_30days$cases[1]</code> representa o número de casos incidentes no dia <code>0</code> para se adequar à notação da equação acima.</p>
+<p>No dia 1, os desfechos esperados são iguais a:</p>
+<ul>
+<li><span class="math inline">\(c_0 \times (f_1)\)</span>: o número de casos incidentes no dia 0 multiplicado pela densidade no dia 1, mais</li>
+<li><span class="math inline">\(c_1 \times (f_0)\)</span>: o número de casos incidentes no dia 1 multiplicado pela densidade no dia 0.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Até o Dia 1, os desfechos esperados são:</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>ebola_30days<span class="sc">$</span>cases[<span class="dv">1</span>] <span class="sc">*</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  ebola_30days<span class="sc">$</span>cases[<span class="dv">2</span>] <span class="sc">*</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">0</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.06495664</code></pre>
+</div>
+</div>
+<p>No dia 2, os desfechos esperados são iguais a:</p>
+<ul>
+<li><span class="math inline">\(c_0 \times (f_2)\)</span>: o número de casos incidentes no dia 0 multiplicado pela densidade no dia 2, mais</li>
+<li><span class="math inline">\(c_1 \times (f_1)\)</span>: o número de casos incidentes no dia 1 multiplicado pela densidade no dia 1, mais</li>
+<li><span class="math inline">\(c_2 \times (f_0)\)</span>: o número de casos incidentes no dia 2 multiplicado pela densidade no dia 0.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Até o Dia 3, os desfechos esperados são:</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>ebola_30days<span class="sc">$</span>cases[<span class="dv">1</span>] <span class="sc">*</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  ebola_30days<span class="sc">$</span>cases[<span class="dv">2</span>] <span class="sc">*</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  ebola_30days<span class="sc">$</span>cases[<span class="dv">3</span>] <span class="sc">*</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> <span class="dv">0</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.08295091</code></pre>
+</div>
+</div>
+<p>Observe que o índice de atraso se desloca um dia por vez: os casos mais recentes (dia <span class="math inline">\(t\)</span>) são ponderados por <span class="math inline">\(f_0\)</span>, os casos do dia anterior por <span class="math inline">\(f_1\)</span>, e assim por diante, com cada dia anterior avançando um passo a mais na distribuição de atraso.</p>
+<p>Como o valor de entrada em <code>at</code> varia por dia para os casos incidentes de um determinado dia (<code>at = 0</code>, <code>at = 1</code>, <code>at = 2</code>, …), a <code>density()</code> precisa ser expressa como uma função de <code>x</code>. O <code>{cfr}</code> então extrairá os valores de acordo, como mostrado abaixo:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># O {cfr} usa a densidade da distribuição em diferentes valores de x</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="cf">function</span>(x) <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> x)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Internamente, para os primeiros 3 dias (dia 0, dia 1 e dia 2), a função <code>cfr::estimate_outcomes()</code> realiza este cálculo:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>cfr<span class="sc">::</span><span class="fu">estimate_outcomes</span>(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ebola_30days,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(onset_to_death_ebola, <span class="at">at =</span> x)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_head</span>(<span class="at">n =</span> <span class="dv">3</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(estimated_outcomes)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.00000000 0.06495664 0.08295091</code></pre>
+</div>
+</div>
+<p>Os valores impressos acima são os <code>estimate_outcomes</code> para o dia correspondente.</p>
+</section>
+</section>
+<section id="segundo-passo-o-número-total-esperado-de-desfechos-até-o-tempo-t" class="level3">
+<h3 class="anchored" data-anchor-id="segundo-passo-o-número-total-esperado-de-desfechos-até-o-tempo-t">Segundo passo: o número total esperado de desfechos “até” o tempo t</h3>
+<p>Esses desfechos esperados por dia são então somados cumulativamente ao longo de todo o histórico até o tempo <code>t</code> para obter o <strong>número total esperado de desfechos “até” o tempo <code>t</code></strong>.</p>
+<p>Até o dia 2, o total de desfechos esperados é igual a:</p>
+<ul>
+<li><span class="math inline">\(c_0 \times (f_0 + f_1 + f_2)\)</span>: desfechos esperados dos casos incidentes do dia 0, até o dia 2</li>
+<li><span class="math inline">\(c_1 \times (f_0 + f_1)\)</span>: desfechos esperados dos casos incidentes do dia 1, até o dia 2</li>
+<li><span class="math inline">\(c_2 \times (f_0)\)</span>: desfechos esperados dos casos incidentes do dia 2, até o dia 2</li>
+</ul>
+<p>A soma desses termos fornece o total de desfechos esperados até o dia 2. Isso corresponde ao somatório duplo mostrado acima. Esse total é usado para calcular o <strong>fator de subestimação</strong> (<code>u_t</code>), a fração de casos cujos desfechos já são conhecidos.</p>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Usar a classe epiparameter
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ao usar um objeto da classe <code>&lt;epiparameter&gt;</code>, podemos usar esta expressão como modelo:</p>
+<p><code>function(x) density(&lt;OBJETO_EPIPARAMETER&gt;, x)</code></p>
+<p>Para funções de distribuição com parâmetros não disponíveis no <code>{epiparameter}</code>, sugerimos duas alternativas:</p>
+<ul>
+<li><p>Criar um objeto da classe <code>&lt;epiparameter&gt;</code>, para conectar com outros pacotes de R do pipeline de análise de surtos. Leia a <a href="https://epiverse-trace.github.io/epiparameter/reference/epiparameter.html">documentação de referência de <code>epiparameter::epiparameter()</code></a></p></li>
+<li><p>Ler a vinheta do <code>{cfr}</code> para <a href="https://epiverse-trace.github.io/cfr/articles/delay_distributions.html">uma introdução sobre o trabalho com distribuições de atraso</a>.</p></li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-21-contents" aria-controls="callout-21" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-21" class="callout-21-contents callout-collapse collapse">
+<section id="quando-usar-distribuições-discretas" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="quando-usar-distribuições-discretas">Quando usar distribuições discretas?</h3>
+<p>Para <code>cfr_static()</code> e todas as funções da família <code>cfr_*()</code>, as distribuições mais adequadas para uso são as <strong>discretas</strong>. Isso ocorre porque o <code>{cfr}</code> opera com dados de contagem em tempo discreto: contagens diárias de casos e óbitos.</p>
+<p>Podemos assumir que avaliar a Função Densidade de Probabilidade (FDP/PDF) de uma distribuição <em>contínua</em> é equivalente à Função Massa de Probabilidade (FMP/PMF) da distribuição <em>discreta</em> equivalente.</p>
+<p>No entanto, essa suposição pode não ser apropriada para distribuições com picos mais acentuados. Por exemplo, doenças com uma distribuição do início dos sintomas ao óbito fortemente pontiaguda e com baixa variância. Nesses casos, espera-se que a disparidade média entre a FDP e a FMP seja mais pronunciada em comparação com distribuições de maior dispersão. Uma maneira de lidar com isso é discretizar a distribuição contínua usando <code>epiparameter::discretise()</code> em um objeto <code>&lt;epiparameter&gt;</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>onset_to_death_ebola <span class="sc">%&gt;%</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">discretise</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="05-severidade-estatica_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Use o mesmo arquivo do desafio anterior (<a href="../data/sarscov2_cases_deaths.csv">sarscov2_cases_deaths.csv</a>).</p>
+<p>Estime o CFR ajustado pelo atraso usando a distribuição de atraso apropriada. Em seguida:</p>
+<ul>
+<li>Compare as soluções do CFR ingênuo e do CFR ajustado pelo atraso!</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-22-contents" aria-controls="callout-22" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-22" class="callout-22-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<ul>
+<li>Encontre o objeto <code>&lt;epiparameter&gt;</code> apropriado!</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-23-contents" aria-controls="callout-23" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-23" class="callout-23-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Usamos o <code>{epiparameter}</code> para acessar uma distribuição de atraso para os dados de incidência agregada de SARS-CoV-2:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>sarscov2_delay <span class="ot">&lt;-</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">epi_name =</span> <span class="st">"onset to death"</span>,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Lemos os dados de entrada usando <code>readr::read_csv()</code>. Esta função reconhece que a coluna <code>date</code> é um vetor de classe <code>&lt;date&gt;</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ler dados</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ex.: se o caminho para o arquivo for data/raw-data/ebola_cases.csv, então:</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>sarscov2_input <span class="ot">&lt;-</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  readr<span class="sc">::</span><span class="fu">read_csv</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data"</span>, <span class="st">"raw-data"</span>, <span class="st">"sarscov2_cases_deaths.csv"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspecionar os dados</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>sarscov2_input</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 93 × 3
+   date       cases_jpn deaths_jpn
+   &lt;date&gt;         &lt;dbl&gt;      &lt;dbl&gt;
+ 1 2020-01-20         1          0
+ 2 2020-01-21         1          0
+ 3 2020-01-22         0          0
+ 4 2020-01-23         1          0
+ 5 2020-01-24         1          0
+ 6 2020-01-25         3          0
+ 7 2020-01-26         3          0
+ 8 2020-01-27         4          0
+ 9 2020-01-28         6          0
+10 2020-01-29         7          0
+# ℹ 83 more rows</code></pre>
+</div>
+</div>
+<p>Podemos usar <code>dplyr::rename()</code> para adaptar os dados externos ao formato de entrada para <code>cfr_static()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Renomear colunas antes de estimar o CFR ajustado pelo atraso</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sarscov2_input <span class="sc">%&gt;%</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cases =</span> cases_jpn,</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">deaths =</span> deaths_jpn</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  cfr<span class="sc">::</span><span class="fu">cfr_static</span>(</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(sarscov2_delay, x)</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  severity_estimate severity_low severity_high
+1            0.0734        0.071        0.0759</code></pre>
+</div>
+</div>
+<p>Tarefa: Interprete a comparação entre as estimativas de CFR ingênuo e ajustado pelo atraso.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="uma-estimativa-de-cfr-em-estágio-inicial" class="level2">
+<h2 class="anchored" data-anchor-id="uma-estimativa-de-cfr-em-estágio-inicial">Uma estimativa de CFR em estágio inicial</h2>
+<p>A estimativa <strong>ingênua</strong> é útil para obter uma estimativa de gravidade geral do surto (até o momento). Uma vez que o surto tenha terminado ou progredido de modo que mais óbitos sejam notificados, o CFR estimado torna-se mais próximo do CFR ‘verdadeiro’ e não viesado.</p>
+<p>Por outro lado, a estimativa <strong>ajustada pelo atraso</strong> pode avaliar a gravidade de uma doença infecciosa emergente <em>mais precocemente</em> em um surto, fornecendo uma avaliação da gravidade mais confiável do que o CFR ingênuo.</p>
+<p>Podemos explorar a determinação <strong>precoce</strong> do <em>CFR ajustado pelo atraso</em> usando a função <code>cfr_rolling()</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Nota
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>cfr_rolling()</code> é uma função utilitária que calcula automaticamente o CFR para cada dia do surto com os dados disponíveis até aquele dia, economizando tempo do usuário.</p>
+</div>
+</div>
+<p><code>cfr_rolling()</code> mostra o CFR estimado em cada dia do surto, considerando que dados futuros sobre casos e óbitos não estão disponíveis no momento. O valor final das estimativas de <code>cfr_rolling()</code> é idêntico ao de <code>cfr_static()</code> nos mesmos dados.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para todos os 73 dias no conjunto de dados de Ebola</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Calcular o CFR ingênuo diário acumulado (rolling)</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>rolling_cfr_naive <span class="ot">&lt;-</span> cfr<span class="sc">::</span><span class="fu">cfr_rolling</span>(<span class="at">data =</span> ebola1976)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`cfr_rolling()` is a convenience function to help understand how additional data influences the overall (static) severity. Use `cfr_time_varying()` instead to estimate severity changes over the course of the outbreak.</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para todos os 73 dias no conjunto de dados de Ebola</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Calcular o CFR diário acumulado ajustado pelo atraso</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>rolling_cfr_adjusted <span class="ot">&lt;-</span> cfr<span class="sc">::</span><span class="fu">cfr_rolling</span>(</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ebola1976,</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(onset_to_death_ebola, x)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`cfr_rolling()` is a convenience function to help understand how additional data influences the overall (static) severity. Use `cfr_time_varying()` instead to estimate severity changes over the course of the outbreak.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Some daily ratios of total deaths to total cases with known outcome are below 0.01%: some CFR estimates may be unreliable.FALSE</code></pre>
+</div>
+</div>
+<p>Com <code>utils::tail()</code>, visualizamos as estimativas mais recentes do CFR. As estimativas ingênua e ajustada pelo atraso apresentam intervalos de confiança de 95% que se sobrepõem.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Imprimir o final (tail) do data frame</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>utils<span class="sc">::</span><span class="fu">tail</span>(rolling_cfr_naive)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>utils<span class="sc">::</span><span class="fu">tail</span>(rolling_cfr_adjusted)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Agora, vamos visualizar ambos os resultados em uma série temporal. Como as estimativas de CFR ingênuo e ajustado pelo atraso se comportariam em tempo real?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># unir por linhas ambos os data frames de saída</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">naive =</span> rolling_cfr_naive,</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">adjusted =</span> rolling_cfr_adjusted</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">.id =</span> <span class="st">"method"</span></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># visualizar tanto as estimativas móveis ajustadas quanto as não ajustadas</span></span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(</span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>      date,</span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">ymin =</span> severity_low,</span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">ymax =</span> severity_high,</span>
+<span id="cb38-16"><a href="#cb38-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">fill =</span> method</span>
+<span id="cb38-17"><a href="#cb38-17" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb38-18"><a href="#cb38-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span></span>
+<span id="cb38-19"><a href="#cb38-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
+<span id="cb38-21"><a href="#cb38-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(date, severity_estimate, <span class="at">colour =</span> method)</span>
+<span id="cb38-22"><a href="#cb38-22" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="05-severidade-estatica_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As linhas vermelha e azul representam o CFR ajustado pelo atraso e o CFR ingênuo, respectivamente, ao longo do surto. As faixas ao redor delas representam os intervalos de confiança de 95% (IC 95%).</p>
+<p><strong>Observe</strong> que esse cálculo ajustado pelo atraso é particularmente útil quando uma <em>curva epidêmica de casos confirmados</em> é o único dado disponível (ou seja, quando dados individuais do início dos sintomas ao óbito não estão disponíveis, especialmente durante o estágio inicial da epidemia). Quando há poucos óbitos ou nenhum óbito, deve-se assumir uma <em>distribuição de atraso</em> do início dos sintomas ao óbito, por exemplo, a partir da literatura baseada em surtos anteriores. <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a> ilustram isso nas figuras com dados do surto de SARS em Hong Kong, 2003.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-26-contents" aria-controls="callout-26" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-26" class="callout-26-contents callout-collapse collapse">
+<section id="estudo-de-caso-surto-de-sars-hong-kong-2003" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="estudo-de-caso-surto-de-sars-hong-kong-2003">Estudo de caso: surto de SARS, Hong Kong, 2003</h3>
+<p>As Figuras A e B mostram os números cumulativos de casos e óbitos de SARS, e a Figura C mostra as estimativas de CFR observadas (viesadas) em função do tempo, isto é, o número cumulativo de óbitos sobre os casos no tempo <span class="math inline">\(t\)</span>. Devido ao atraso entre o início dos sintomas e o óbito, a estimativa viesada do CFR no tempo <span class="math inline">\(t\)</span> subestima o CFR realizado ao final de um surto (ou seja, 302/1755 = 17,2%).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-pone.0006852.g003-fig_abc.png" class="img-fluid figure-img"></p>
+<figcaption>Risco de letalidade de casos confirmados observado (viesado) da síndrome respiratória aguda grave (SARS) em Hong Kong, 2003. (<a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a>)</figcaption>
+</figure>
+</div>
+<p>No entanto, mesmo usando apenas os dados observados para o período de 19 de março a 2 de abril, <code>cfr_static()</code> pode produzir uma predição adequada (Figura D); por exemplo, o CFR ajustado pelo atraso em 27 de março é de 18,1% (IC 95%: 10,5, 28,1). Uma superestimação é observada nos estágios muito iniciais da epidemia, mas os limites de confiança de 95% nos estágios posteriores incluem o CFR realizado (ou seja, 17,2%).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-pone.0006852.g003-fig_d.png" class="img-fluid figure-img"></p>
+<figcaption>Determinação precoce do risco de letalidade de casos confirmados ajustado pelo atraso da síndrome respiratória aguda grave (SARS) em Hong Kong, 2003. (<a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a>)</figcaption>
+</figure>
+</div>
+</section>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="interpretar-a-estimativa-do-cfr-em-estágio-inicial" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="interpretar-a-estimativa-do-cfr-em-estágio-inicial">Interpretar a estimativa do CFR em estágio inicial</h3>
+<p>Com base na figura acima do CFR cumulativo (rolling) ingênuo e ajustado:</p>
+<ul>
+<li>Quantos dias separam as datas em que o IC 95% do <strong>CFR ajustado pelo atraso</strong> e o IC 95% do <strong>CFR ingênuo</strong> cruzam pela primeira vez o CFR estimado ao final do surto?</li>
+</ul>
+<p>Discuta:</p>
+<ul>
+<li>Quais são as implicações para as políticas de saúde pública de dispor de uma estimativa de <em>CFR ajustado pelo atraso</em>?</li>
+</ul>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Podemos usar uma inspeção visual ou analisar os data frames de saída.</p>
+<p>O CFR estimado ao final do surto é:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>utils<span class="sc">::</span><span class="fu">tail</span>(rolling_cfr_naive, <span class="at">n =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         date severity_estimate severity_low severity_high
+73 1976-11-05          0.955102    0.9210866     0.9773771</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-29" class="callout-29-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Há quase um mês de diferença.</p>
+<p>Note que a estimativa tem uma incerteza considerável no início da série temporal. Após duas semanas, o CFR ajustado pelo atraso aproxima-se da estimativa global de CFR ao final do surto.</p>
+<p>Esse padrão é semelhante ao de outros surtos? Podemos usar os conjuntos de dados dos desafios deste episódio. Convidamos você a descobrir!</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="checklist" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="checklist">Checklist</h3>
+<p>Com o <code>{cfr}</code>, estimamos o CFR como a proporção de óbitos entre os casos <strong>confirmados</strong>.</p>
+<p>Ao utilizar apenas casos <strong>confirmados</strong>, fica claro que todos os casos que não buscam atendimento médico ou não são notificados não serão captados, assim como todos os casos assintomáticos. Isso significa que a estimativa do CFR é mais alta que a proporção de óbitos entre os infectados.</p>
+</section>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-31-contents" aria-controls="callout-31" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-31" class="callout-31-contents callout-collapse collapse">
+<section id="por-que-o-ingênuo-e-o-ajustado-pelo-atraso-diferem" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="por-que-o-ingênuo-e-o-ajustado-pelo-atraso-diferem">Por que o ingênuo e o ajustado pelo atraso diferem?</h3>
+<p>O método do <code>{cfr}</code> visa obter um estimador não viesado “bem antes” de observar todo o curso do surto. Para isso, o <code>{cfr}</code> usa o fator de subestimação <span class="math inline">\(u_{t}\)</span> para estimar o CFR não viesado <span class="math inline">\(p_{t}\)</span> usando métodos de máxima verossimilhança, dado o <em>processo de amostragem</em> definido por <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0006852">Nishiura et al., 2009</a>.</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-32-contents" aria-controls="callout-32" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-32" class="callout-32-contents callout-collapse collapse">
+<section id="o-que-é-o-processo-de-amostragem" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-que-é-o-processo-de-amostragem">O que é o processo de amostragem?</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-pone.0006852.g001.png" class="img-fluid figure-img"></p>
+<figcaption>A população de casos confirmados e o processo de amostragem para estimar o CFR não viesado durante o curso de um surto. (<a href="https://doi.org/10.1371/journal.pone.0006852.g001">Nishiura et al., 2009</a>)</figcaption>
+</figure>
+</div>
+<p>A partir de <em>dados agregados de incidência</em>, no tempo <span class="math inline">\(t\)</span> conhecemos o número cumulativo de casos confirmados e óbitos, <span class="math inline">\(C_{t}\)</span> e <span class="math inline">\(D_{t}\)</span>, e desejamos estimar o CFR não viesado <span class="math inline">\(\pi\)</span>, por meio do fator de subestimação <span class="math inline">\(u_{t}\)</span>.</p>
+<p>Se conhecêssemos o fator de subestimação <span class="math inline">\(u_{t}\)</span>, poderíamos especificar o tamanho da população de casos confirmados que não estão mais sob risco (<span class="math inline">\(u_{t}C_{t}\)</span>, <strong>sombreado</strong>), embora não saibamos quais indivíduos sobreviventes pertencem a esse grupo. Espera-se que uma proporção <span class="math inline">\(\pi\)</span> daqueles no grupo de casos ainda sob risco (tamanho <span class="math inline">\((1- u_{t})C_{t}\)</span>, <strong>não sombreado</strong>) venha a óbito.</p>
+<p>Como cada caso que não está mais sob risco teve uma probabilidade independente de morrer, <span class="math inline">\(\pi\)</span>, o número de óbitos, <span class="math inline">\(D_{t}\)</span>, é uma amostra de uma distribuição binomial com tamanho amostral <span class="math inline">\(u_{t}C_{t}\)</span> e probabilidade de morrer <span class="math inline">\(p_{t}\)</span> = <span class="math inline">\(\pi\)</span>.</p>
+<p>Isso é representado pela seguinte função de verossimilhança para obter a estimativa de máxima verossimilhança do CFR não viesado <span class="math inline">\(p_{t}\)</span> = <span class="math inline">\(\pi\)</span>:</p>
+<p><span class="math display">\[
+  {\sf L}(\pi | C_{t},D_{t},u_{t}) = \log{\dbinom{u_{t}C_{t}}{D_{t}}} + D_{t} \log{\pi} +
+  (u_{t}C_{t} - D_{t})\log{(1 - \pi)},
+\]</span></p>
+<p>Essa estimativa é realizada pela função interna <code>?cfr:::estimate_severity()</code>.</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-33-contents" aria-controls="callout-33" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-33" class="callout-33-contents callout-collapse collapse">
+<section id="limitações" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="limitações">Limitações</h3>
+<ul>
+<li>O CFR ajustado pelo atraso não aborda todas as fontes de erro nos dados, como o subdiagnóstico de indivíduos infectados.</li>
+</ul>
+</section>
+</div>
+</div>
+</section>
+<section id="desafios" class="level2">
+<h2 class="anchored" data-anchor-id="desafios">Desafios</h2>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dados agregados diferem de linelists
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Dados de incidência <em>agregados</em> diferem de dados em formato de <strong>linelist</strong>, onde cada observação contém dados no nível individual.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>outbreaks<span class="sc">::</span>ebola_sierraleone_2014 <span class="sc">%&gt;%</span> <span class="fu">as_tibble</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 11,903 × 8
+      id   age sex   status    date_of_onset date_of_sample district chiefdom   
+   &lt;int&gt; &lt;dbl&gt; &lt;fct&gt; &lt;fct&gt;     &lt;date&gt;        &lt;date&gt;         &lt;fct&gt;    &lt;fct&gt;      
+ 1     1    20 F     confirmed 2014-05-18    2014-05-23     Kailahun Kissi Teng 
+ 2     2    42 F     confirmed 2014-05-20    2014-05-25     Kailahun Kissi Teng 
+ 3     3    45 F     confirmed 2014-05-20    2014-05-25     Kailahun Kissi Tonge
+ 4     4    15 F     confirmed 2014-05-21    2014-05-26     Kailahun Kissi Teng 
+ 5     5    19 F     confirmed 2014-05-21    2014-05-26     Kailahun Kissi Teng 
+ 6     6    55 F     confirmed 2014-05-21    2014-05-26     Kailahun Kissi Teng 
+ 7     7    50 F     confirmed 2014-05-21    2014-05-26     Kailahun Kissi Teng 
+ 8     8     8 F     confirmed 2014-05-22    2014-05-27     Kailahun Kissi Teng 
+ 9     9    54 F     confirmed 2014-05-22    2014-05-27     Kailahun Kissi Teng 
+10    10    57 F     confirmed 2014-05-22    2014-05-27     Kailahun Kissi Teng 
+# ℹ 11,893 more rows</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="usar-o-incidence2-para-reorganizar-seus-dados" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="usar-o-incidence2-para-reorganizar-seus-dados">Usar o incidence2 para reorganizar seus dados</h3>
+<p>A partir do pacote <code>{outbreaks}</code>, carregue o linelist de casos de MERS do objeto <code>mers_korea_2015</code>.</p>
+<p>Reorganize este linelist para se adequar à entrada do pacote <code>{cfr}</code>.</p>
+<p>Estime o CFR ajustado pelo atraso usando a distribuição de atraso correspondente.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-35-contents" aria-controls="callout-35" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-35" class="callout-35-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>Como reorganizar meus dados de entrada?</strong></p>
+<p>Reorganizar os dados de entrada para análise pode levar a maior parte do tempo. Para obter <em>dados agregados de incidência</em> prontos para análise, encorajamos você a usar o <code>{incidence2}</code>!</p>
+<p>Primeiro, na vinheta <a href="https://www.reconverse.org/incidence2/doc/incidence2.html">Get started</a> do pacote <code>{incidence2}</code>, explore como usar o argumento <code>date_index</code> ao ler um linelist com datas em múltiplas colunas.</p>
+<p>Em seguida, consulte o manual de referência do <code>{cfr}</code> sobre <a href="https://epiverse-trace.github.io/cfr/reference/prepare_data.html">preparação de formatos comuns de dados epidemiológicos para estimativa de CFR</a> sobre como usar a função <code>cfr::prepare_data()</code> a partir de objetos do incidence2.</p>
+<!-- citar entrada de como fazer uma conexão linelist + incidence2 + cfr -->
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-36-contents" aria-controls="callout-36" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-36" class="callout-36-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Carregar pacotes</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cfr)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(incidence2)</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Acessar a distribuição de atraso</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>mers_delay <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"mers"</span>,</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"onset to death"</span>,</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Ler o linelist</span></span>
+<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>mers_korea_2015<span class="sc">$</span>linelist <span class="sc">%&gt;%</span></span>
+<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">starts_with</span>(<span class="st">"dt_"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 162 × 6
+   dt_onset   dt_report  dt_start_exp dt_end_exp dt_diag    dt_death  
+   &lt;date&gt;     &lt;date&gt;     &lt;date&gt;       &lt;date&gt;     &lt;date&gt;     &lt;date&gt;    
+ 1 2015-05-11 2015-05-19 2015-04-18   2015-05-04 2015-05-20 NA        
+ 2 2015-05-18 2015-05-20 2015-05-15   2015-05-20 2015-05-20 NA        
+ 3 2015-05-20 2015-05-20 2015-05-16   2015-05-16 2015-05-21 2015-06-04
+ 4 2015-05-25 2015-05-26 2015-05-16   2015-05-20 2015-05-26 NA        
+ 5 2015-05-25 2015-05-27 2015-05-17   2015-05-17 2015-05-26 NA        
+ 6 2015-05-24 2015-05-28 2015-05-15   2015-05-17 2015-05-28 2015-06-01
+ 7 2015-05-21 2015-05-28 2015-05-16   2015-05-17 2015-05-28 NA        
+ 8 2015-05-26 2015-05-29 2015-05-15   2015-05-15 2015-05-29 NA        
+ 9 NA         2015-05-29 2015-05-15   2015-05-17 2015-05-29 NA        
+10 2015-05-21 2015-05-29 2015-05-16   2015-05-16 2015-05-29 NA        
+# ℹ 152 more rows</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Usar {incidence2} para contar a incidência diária</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>mers_incidence <span class="ot">&lt;-</span> mers_korea_2015<span class="sc">$</span>linelist <span class="sc">%&gt;%</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># converter para objeto incidence2</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">incidence</span>(<span class="at">date_index =</span> <span class="fu">c</span>(<span class="st">"dt_onset"</span>, <span class="st">"dt_death"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># preencher datas da primeira à última</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">complete_dates</span>()</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspecionar a saída do incidence2</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>mers_incidence</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># incidence:  72 x 3
+# count vars: dt_death, dt_onset
+   date_index count_variable count
+   &lt;date&gt;     &lt;chr&gt;          &lt;int&gt;
+ 1 2015-05-11 dt_death           0
+ 2 2015-05-11 dt_onset           1
+ 3 2015-05-12 dt_death           0
+ 4 2015-05-12 dt_onset           0
+ 5 2015-05-13 dt_death           0
+ 6 2015-05-13 dt_onset           0
+ 7 2015-05-14 dt_death           0
+ 8 2015-05-14 dt_onset           0
+ 9 2015-05-15 dt_death           0
+10 2015-05-15 dt_onset           0
+# ℹ 62 more rows</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Preparar dados do {incidence2} para o {cfr}</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>mers_incidence <span class="sc">%&gt;%</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>  cfr<span class="sc">::</span><span class="fu">prepare_data</span>(</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cases_variable =</span> <span class="st">"dt_onset"</span>,</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">deaths_variable =</span> <span class="st">"dt_death"</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         date deaths cases
+1  2015-05-11      0     1
+2  2015-05-12      0     0
+3  2015-05-13      0     0
+4  2015-05-14      0     0
+5  2015-05-15      0     0
+6  2015-05-16      0     0
+7  2015-05-17      0     1
+8  2015-05-18      0     1
+9  2015-05-19      0     0
+10 2015-05-20      0     5
+11 2015-05-21      0     6
+12 2015-05-22      0     2
+13 2015-05-23      0     4
+14 2015-05-24      0     2
+15 2015-05-25      0     3
+16 2015-05-26      0     1
+17 2015-05-27      0     2
+18 2015-05-28      0     1
+19 2015-05-29      0     3
+20 2015-05-30      0     5
+21 2015-05-31      0    10
+22 2015-06-01      2    16
+23 2015-06-02      0    11
+24 2015-06-03      1     7
+25 2015-06-04      1    12
+26 2015-06-05      1     9
+27 2015-06-06      0     7
+28 2015-06-07      0     7
+29 2015-06-08      2     6
+30 2015-06-09      0     1
+31 2015-06-10      2     6
+32 2015-06-11      1     3
+33 2015-06-12      0     0
+34 2015-06-13      0     2
+35 2015-06-14      0     0
+36 2015-06-15      0     1</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar o CFR ajustado pelo atraso</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>mers_incidence <span class="sc">%&gt;%</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  cfr<span class="sc">::</span><span class="fu">prepare_data</span>(</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cases_variable =</span> <span class="st">"dt_onset"</span>,</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">deaths_variable =</span> <span class="st">"dt_death"</span></span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>  cfr<span class="sc">::</span><span class="fu">cfr_static</span>(<span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(mers_delay, x))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  severity_estimate severity_low severity_high
+1            0.1377       0.0716        0.2288</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="heterogeneidade-da-gravidade" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="heterogeneidade-da-gravidade">Heterogeneidade da gravidade</h3>
+<p>O CFR pode diferir entre populações (por exemplo, por idade, espaço, tratamento); quantificar essas heterogeneidades pode ajudar a direcionar recursos adequadamente e a comparar diferentes regimes terapêuticos (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al., 2017</a>).</p>
+<p>Use o data frame <code>cfr::covid_data</code> para estimar um CFR ajustado pelo atraso estratificado por país.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-38-contents" aria-controls="callout-38" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-38" class="callout-38-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Uma maneira de fazer uma <em>análise estratificada</em> é aplicar um modelo a dados aninhados. Esta <a href="https://tidyr.tidyverse.org/articles/nest.html#nested-data-and-models">vinheta do <code>{tidyr}</code></a> mostra como aplicar <code>group_by()</code> + <code>nest()</code> para aninhar dados e, em seguida, <code>mutate()</code> + <code>map()</code> para aplicar o modelo.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-39-contents" aria-controls="callout-39" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-39" class="callout-39-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cfr)</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>covid_data <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 20,786
+Columns: 4
+$ date    &lt;date&gt; 2020-01-03, 2020-01-03, 2020-01-03, 2020-01-03, 2020-01-03, 2…
+$ country &lt;chr&gt; "Argentina", "Brazil", "Colombia", "France", "Germany", "India…
+$ cases   &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+$ deaths  &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>delay_onset_death <span class="ot">&lt;-</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">epi_name =</span> <span class="st">"onset to death"</span>,</span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-8"><a href="#cb53-8" aria-hidden="true" tabindex="-1"></a>covid_data <span class="sc">%&gt;%</span></span>
+<span id="cb53-9"><a href="#cb53-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(country) <span class="sc">%&gt;%</span></span>
+<span id="cb53-10"><a href="#cb53-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nest</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb53-11"><a href="#cb53-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb53-12"><a href="#cb53-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">temp =</span></span>
+<span id="cb53-13"><a href="#cb53-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">map</span>(</span>
+<span id="cb53-14"><a href="#cb53-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">.x =</span> data,</span>
+<span id="cb53-15"><a href="#cb53-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">.f =</span> cfr<span class="sc">::</span>cfr_static,</span>
+<span id="cb53-16"><a href="#cb53-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">delay_density =</span> <span class="cf">function</span>(x) <span class="fu">density</span>(delay_onset_death, x)</span>
+<span id="cb53-17"><a href="#cb53-17" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb53-18"><a href="#cb53-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb53-19"><a href="#cb53-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="at">cols =</span> temp)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 19 × 5
+# Groups:   country [19]
+   country        data     severity_estimate severity_low severity_high
+   &lt;chr&gt;          &lt;list&gt;               &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;
+ 1 Argentina      &lt;tibble&gt;            0.0133       0.0133        0.0133
+ 2 Brazil         &lt;tibble&gt;            0.0195       0.0195        0.0195
+ 3 Colombia       &lt;tibble&gt;            0.0225       0.0224        0.0226
+ 4 France         &lt;tibble&gt;            0.0044       0.0044        0.0044
+ 5 Germany        &lt;tibble&gt;            0.0045       0.0045        0.0045
+ 6 India          &lt;tibble&gt;            0.0119       0.0119        0.0119
+ 7 Indonesia      &lt;tibble&gt;            0.024        0.0239        0.0241
+ 8 Iran           &lt;tibble&gt;            0.0191       0.0191        0.0192
+ 9 Italy          &lt;tibble&gt;            0.0075       0.0075        0.0075
+10 Mexico         &lt;tibble&gt;            0.0461       0.046         0.0462
+11 Peru           &lt;tibble&gt;            0.0502       0.0501        0.0504
+12 Poland         &lt;tibble&gt;            0.0186       0.0186        0.0187
+13 Russia         &lt;tibble&gt;            0.0182       0.0182        0.0182
+14 South Africa   &lt;tibble&gt;            0.0254       0.0253        0.0255
+15 Spain          &lt;tibble&gt;            0.0087       0.0087        0.0087
+16 Turkey         &lt;tibble&gt;            0.006        0.006         0.006 
+17 Ukraine        &lt;tibble&gt;            0.0204       0.0203        0.0205
+18 United Kingdom &lt;tibble&gt;            0.009        0.009         0.009 
+19 United States  &lt;tibble&gt;            0.0111       0.0111        0.0111</code></pre>
+</div>
+</div>
+<p>Ótimo! Agora você pode usar um código semelhante para qualquer outra análise estratificada, como por idade, regiões ou mais!</p>
+<p>Mas como podemos interpretar o fato de existir uma variabilidade de gravidade entre países para o mesmo patógeno diagnosticado?</p>
+<p>Fatores locais como capacidade de testagem, definição de caso e regime de amostragem podem afetar a notificação de casos e óbitos, afetando assim a captação de casos. Dê uma olhada na vinheta do <code>{cfr}</code> sobre <a href="https://epiverse-trace.github.io/cfr/articles/estimate_ascertainment.html">estimar a proporção de casos que são detectados durante um surto</a>!</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</section>
+<section id="apêndice" class="level2">
+<h2 class="anchored" data-anchor-id="apêndice">Apêndice</h2>
+<p>O pacote <code>{cfr}</code> tem uma função chamada <code>cfr_time_varying()</code> com funcionalidade diferente de <code>cfr_rolling()</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Quando usar cfr_rolling()?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>cfr_rolling()</code> mostra o CFR estimado em cada dia do surto, considerando que dados futuros sobre casos e óbitos não estão disponíveis no momento. O valor final das estimativas de <code>cfr_rolling()</code> é idêntico ao de <code>cfr_static()</code> nos mesmos dados.</p>
+<p>Lembre-se, como mostrado acima, <code>cfr_rolling()</code> é útil para obter estimativas de CFR em estágios iniciais e verificar se a estimativa de CFR de um surto se estabilizou. Portanto, <code>cfr_rolling()</code> não é sensível à duração ou ao tamanho da epidemia.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Quando usar <code>cfr_time_varying()</code>?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Por outro lado, <code>cfr_time_varying()</code> calcula o CFR sobre uma janela móvel e ajuda a entender mudanças no CFR decorrentes de alterações na epidemia, por exemplo, devido a uma nova variante ou ao aumento da imunidade pela vacinação.</p>
+<p>No entanto, <code>cfr_time_varying()</code> é sensível à incerteza amostral. Portanto, é sensível ao tamanho do surto. Quanto maior o número de casos com desfechos esperados em um determinado dia, estimativas mais razoáveis do CFR variante no tempo obteremos.</p>
+<p>Por exemplo, com 100 casos, a estimativa do risco de letalidade terá, a grosso modo, um intervalo de confiança de 95% de ±10% da estimativa média (IC binomial). Portanto, se tivermos &gt;100 casos com desfechos esperados <em>em um determinado dia</em>, podemos obter estimativas razoáveis do CFR variante no tempo. Mas se tivermos apenas &gt;100 casos <em>ao longo de toda a epidemia</em>, provavelmente precisaremos recorrer ao <code>cfr_rolling()</code>, que usa os dados cumulativos.</p>
+<p>Convidamos você a ler esta <a href="https://epiverse-trace.github.io/cfr/articles/estimate_time_varying_severity.html">vinheta sobre a função <code>cfr_time_varying()</code></a>.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="mais-medidas-de-gravidade" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="mais-medidas-de-gravidade">Mais medidas de gravidade</h3>
+<p>Suponha que precisemos avaliar a gravidade clínica da epidemia em um contexto diferente dos dados de vigilância, como a gravidade entre os casos que chegam aos hospitais ou casos que você coletou a partir de um inquérito sorológico representativo.</p>
+<p>Usando <code>{cfr}</code>, podemos alterar as variáveis de entrada para o numerador (<code>cases</code>) e o denominador (<code>deaths</code>) para estimar mais medidas de gravidade, como a razão de letalidade por infecção (IFR) ou o risco de letalidade hospitalar (HFR). Podemos seguir esta analogia:</p>
+</section>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-44-contents" aria-controls="callout-44" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-44" class="callout-44-contents callout-collapse collapse">
+<section id="razão-de-letalidade-por-infecção-e-letalidade-hospitalar" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="razão-de-letalidade-por-infecção-e-letalidade-hospitalar">Razão de letalidade por infecção e letalidade hospitalar</h3>
+<p>Se para o risco de letalidade de <em>casos</em> (CFR), precisamos de:</p>
+<ul>
+<li>dados de incidência de <em>casos</em> e de óbitos, com uma</li>
+<li>distribuição de atraso do caso ao óbito (ou aproximação próxima, como do início dos sintomas ao óbito).</li>
+</ul>
+<p>Então, a razão de letalidade por <em>infecção</em> (IFR) requer:</p>
+<ul>
+<li>dados de incidência de <em>infecções</em> e de óbitos, com uma</li>
+<li>distribuição de atraso da exposição ao óbito (ou aproximação próxima).</li>
+</ul>
+<p>Da mesma forma, o risco de letalidade <em>hospitalar</em> (HFR) requer:</p>
+<ul>
+<li>dados de incidência de <em>internações</em> e de óbitos, e uma</li>
+<li>distribuição de atraso da internação ao óbito.</li>
+</ul>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-45-contents" aria-controls="callout-45" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-45" class="callout-45-contents callout-collapse collapse">
+<section id="fontes-de-dados-para-mais-medidas-de-gravidade" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="fontes-de-dados-para-mais-medidas-de-gravidade">Fontes de dados para mais medidas de gravidade</h3>
+<p><a href="https://www.nature.com/articles/s41467-020-19238-2/figures/1">Yang et al., 2020</a> resumem diferentes definições e fontes de dados:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-s41467-020-19238-2-fig_a.png" class="img-fluid figure-img"></p>
+<figcaption>Níveis de gravidade das infecções por SARS-CoV-2 e parâmetros de interesse. Cada nível é considerado um subconjunto do nível abaixo.</figcaption>
+</figure>
+</div>
+<ul>
+<li>sCFR risco de letalidade de casos sintomáticos (symptomatic case-fatality risk),</li>
+<li>sCHR risco de internação de casos sintomáticos (symptomatic case-hospitalisation risk),</li>
+<li>mCFR risco de letalidade de casos com atendimento médico (medically attended case-fatality risk),</li>
+<li>mCHR risco de internação de casos com atendimento médico (medically attended case-hospitalisation risk),</li>
+<li>HFR risco de letalidade hospitalar (hospitalisation-fatality risk).</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/cfr-s41467-020-19238-2-fig_b.png" class="img-fluid figure-img"></p>
+<figcaption>Diagrama esquemático das análises basais. As setas vermelha, azul e verde indicam o fluxo de dados de casos confirmados por laboratório da vigilância passiva, casos clinicamente diagnosticados e casos confirmados por laboratório de triagens ativas.</figcaption>
+</figure>
+</div>
+</section>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Pontos-chave">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Pontos-chave
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><p>Use o <code>{cfr}</code> para estimar a gravidade</p></li>
+<li><p>Use <code>cfr_static()</code> para estimar o CFR global com os dados mais recentes disponíveis.</p></li>
+<li><p>Use <code>cfr_rolling()</code> para mostrar qual seria o CFR estimado em cada dia do surto.</p></li>
+<li><p>Use o argumento <code>delay_density</code> para ajustar o CFR pela distribuição de atraso correspondente.</p></li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../episodios/04-criar-previsoes.html" class="pagination-link" aria-label="Criar previsão de curto prazo">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Criar previsão de curto prazo</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../episodios/06-superspreading-estimar.html" class="pagination-link" aria-label="Levar em conta o superspreading">
+        <span class="nav-page-text"><span class="chapter-title">Levar em conta o superspreading</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/05-severidade-estatica.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

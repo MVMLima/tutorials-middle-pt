@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Configuração – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./episodios/01-acessar-atrasos.html" rel="next">
+<link href="./index.html" rel="prev">
+<link href="./img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./setup.html"><span class="chapter-title">Configuração</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#motivação" id="toc-motivação" class="nav-link active" data-scroll-target="#motivação">Motivação</a>
+  <ul class="collapse">
+  <li><a href="#tutoriais-do-epiverse-trace" id="toc-tutoriais-do-epiverse-trace" class="nav-link" data-scroll-target="#tutoriais-do-epiverse-trace">Tutoriais do Epiverse-TRACE</a></li>
+  <li><a href="#pacotes-r-do-epiverse-trace" id="toc-pacotes-r-do-epiverse-trace" class="nav-link" data-scroll-target="#pacotes-r-do-epiverse-trace">Pacotes R do Epiverse-TRACE</a></li>
+  </ul></li>
+  <li><a href="#instalação-de-softwares" id="toc-instalação-de-softwares" class="nav-link" data-scroll-target="#instalação-de-softwares">Instalação de softwares</a>
+  <ul class="collapse">
+  <li><a href="#instalar-ou-atualizar-o-r-e-o-positron-ou-rstudio-se-preferir" id="toc-instalar-ou-atualizar-o-r-e-o-positron-ou-rstudio-se-preferir" class="nav-link" data-scroll-target="#instalar-ou-atualizar-o-r-e-o-positron-ou-rstudio-se-preferir">1. Instalar ou atualizar o R e o Positron (ou RStudio, se preferir)</a></li>
+  <li><a href="#verificar-e-instalar-ferramentas-de-compilação-build-tools" id="toc-verificar-e-instalar-ferramentas-de-compilação-build-tools" class="nav-link" data-scroll-target="#verificar-e-instalar-ferramentas-de-compilação-build-tools">2. Verificar e instalar ferramentas de compilação (Build Tools)</a></li>
+  <li><a href="#instalar-os-pacotes-r-necessários" id="toc-instalar-os-pacotes-r-necessários" class="nav-link" data-scroll-target="#instalar-os-pacotes-r-necessários">3. Instalar os pacotes R necessários</a></li>
+  <li><a href="#verificar-a-instalação" id="toc-verificar-a-instalação" class="nav-link" data-scroll-target="#verificar-a-instalação">4. Verificar a instalação</a></li>
+  <li><a href="#assistir-e-ler-o-material-pré-curso" id="toc-assistir-e-ler-o-material-pré-curso" class="nav-link" data-scroll-target="#assistir-e-ler-o-material-pré-curso">5. Assistir e ler o material pré-curso</a></li>
+  </ul></li>
+  <li><a href="#conjuntos-de-dados" id="toc-conjuntos-de-dados" class="nav-link" data-scroll-target="#conjuntos-de-dados">Conjuntos de dados</a>
+  <ul class="collapse">
+  <li><a href="#baixar-os-dados" id="toc-baixar-os-dados" class="nav-link" data-scroll-target="#baixar-os-dados">Baixar os dados</a></li>
+  </ul></li>
+  <li><a href="#your-questions" id="toc-your-questions" class="nav-link" data-scroll-target="#your-questions">Suas dúvidas</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/setup.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Configuração</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="motivação" class="level2">
+<h2 class="anchored" data-anchor-id="motivação">Motivação</h2>
+<p><strong>Surtos</strong> de doenças infecciosas podem surgir como resultado de diferentes patógenos e em diferentes contextos, mas normalmente levam a questões de saúde pública semelhantes, desde a compreensão dos padrões de transmissão e gravidade até a análise do efeito das medidas de controle (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371#d1e605">Cori et al.&nbsp;2017</a>). Podemos relacionar cada uma dessas questões de saúde pública a uma série de tarefas de análise de dados de surtos. Quanto mais eficiente e confiavelmente realizarmos essas tarefas, mais rápido e com maior precisão poderemos responder às perguntas fundamentais.</p>
+<p>O Epiverse-TRACE tem como objetivo fornecer um ecossistema de software para <a href="./glossario.html#outbreakanalytics"><strong>análise de surtos</strong></a> com ferramentas integradas, generalizáveis e escaláveis, desenvolvidas pela comunidade. Apoiamos o desenvolvimento de novos pacotes R, ajudamos a conectar ferramentas existentes para torná-las mais fáceis de usar e contribuímos para uma comunidade de prática que abrange epidemiologistas de campo, cientistas de dados, pesquisadores de laboratório, analistas de agências de saúde, engenheiros de software e muito mais.</p>
+<section id="tutoriais-do-epiverse-trace" class="level3">
+<h3 class="anchored" data-anchor-id="tutoriais-do-epiverse-trace">Tutoriais do Epiverse-TRACE</h3>
+<p>Nossos tutoriais são estruturados em torno de um pipeline de análise de surtos dividido em três etapas: <strong>tarefas iniciais (Early tasks)</strong>, <strong>tarefas intermediárias (Middle tasks)</strong> e <strong>tarefas avançadas (Late tasks)</strong>. Os resultados das tarefas concluídas nas etapas anteriores normalmente alimentam as tarefas necessárias para as etapas posteriores.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://epiverse-trace.github.io/task_pipeline-minimal.svg" class="img-fluid figure-img"></p>
+<figcaption>Visão geral dos tópicos dos tutoriais</figcaption>
+</figure>
+</div>
+<p>Cada tarefa possui seu próprio site de tutoriais, e cada site de tutorial consiste em um conjunto de episódios cobrindo diferentes tópicos.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th><a href="https://epiverse-trace.github.io/tutorials-early/">Tutoriais de tarefas iniciais ➠</a></th>
+<th><a href="https://epiverse-trace.github.io/tutorials-middle">Tutoriais de tarefas intermediárias ➠</a></th>
+<th><a href="https://epiverse-trace.github.io/tutorials-late/">Tutoriais de tarefas avançadas ➠</a></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Ler e limpar dados de casos, e criar linelists</td>
+<td>Análise em tempo real e previsão</td>
+<td>Modelagem de cenários</td>
+</tr>
+<tr class="even">
+<td>Ler, limpar e validar dados de casos, converter dados de linelist em incidência para visualização.</td>
+<td>Acessar distribuições de atraso e estimar métricas de transmissão, prever casos, estimar gravidade e superspreading.</td>
+<td>Simular a propagação de doenças e investigar intervenções.</td>
+</tr>
+</tbody>
+</table>
+<p>Cada episódio contém:</p>
+<ul>
+<li><strong>Visão geral</strong>: descreve quais perguntas serão respondidas e os objetivos do episódio.</li>
+<li><strong>Pré-requisitos</strong>: descreve quais episódios/pacotes idealmente precisam ser concluídos antes do episódio atual.</li>
+<li><strong>Código R de exemplo</strong>: código R de exemplo para que você possa acompanhar os episódios no seu próprio computador.</li>
+<li><strong>Desafios</strong>: desafios que podem ser realizados para testar seu entendimento.</li>
+<li><strong>Explicações</strong>: quadros para aprofundar seu entendimento de conceitos matemáticos e de modelagem.</li>
+</ul>
+<p>Consulte também o <a href="./glossario.html">glossário</a> para quaisquer termos com os quais você talvez não esteja familiarizado.</p>
+</section>
+<section id="pacotes-r-do-epiverse-trace" class="level3">
+<h3 class="anchored" data-anchor-id="pacotes-r-do-epiverse-trace">Pacotes R do Epiverse-TRACE</h3>
+<p>Nossa estratégia é incorporar gradualmente <strong>pacotes R</strong> especializados em um pipeline de análise tradicional. Esses pacotes devem preencher as lacunas nessas tarefas específicas da epidemiologia em resposta a surtos.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/pkgs-hexlogos-2.png" class="img-fluid figure-img"></p>
+<figcaption>No <strong>R</strong>, a unidade fundamental de código compartilhável é o <strong>pacote</strong>. Um pacote reúne código, dados, documentação e testes, sendo fácil de compartilhar com outras pessoas (<a href="https://r-pkgs.org/introduction.html">Wickham e Bryan, 2023</a>)</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Este conteúdo pressupõe conhecimento intermediário de R. Estes tutoriais são para você se:</p>
+<ul>
+<li>Você consegue importar dados no R, transformar e remodelar dados, e produzir uma ampla variedade de gráficos</li>
+<li>Você está familiarizado com funções do <code>{dplyr}</code>, <code>{tidyr}</code> e <code>{ggplot2}</code></li>
+<li>Você sabe usar o pipe do magrittr <code>%&gt;%</code> e/ou o pipe nativo <code>|&gt;</code>.</li>
+</ul>
+<p>Esperamos que os participantes tenham algum contato com conceitos básicos de Estatística, Matemática e teoria de epidemias, mas NÃO familiaridade intermediária ou avançada com modelagem.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="instalação-de-softwares" class="level2">
+<h2 class="anchored" data-anchor-id="instalação-de-softwares">Instalação de softwares</h2>
+<p>Siga estas duas etapas:</p>
+<section id="instalar-ou-atualizar-o-r-e-o-positron-ou-rstudio-se-preferir" class="level3">
+<h3 class="anchored" data-anchor-id="instalar-ou-atualizar-o-r-e-o-positron-ou-rstudio-se-preferir">1. Instalar ou atualizar o R e o Positron (ou RStudio, se preferir)</h3>
+<p>O R e o Positron são dois softwares distintos:</p>
+<ul>
+<li>O <strong>R</strong> é uma linguagem de programação e um software usado para executar códigos escritos em R.</li>
+<li>O <strong>Positron</strong> é um ambiente de desenvolvimento integrado (IDE) que facilita o uso do R. Recomendamos usar o Positron para interagir com o R.</li>
+</ul>
+<p>Para instalar o R e o Positron (ou RStudio), siga estas instruções <a href="https://posit.co/download/rstudio-desktop/" class="uri">https://posit.co/download/rstudio-desktop/</a>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Já está instalado?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Espere um pouco: este é um ótimo momento para garantir que sua instalação do R esteja atualizada.</p>
+<p>Este tutorial requer o <strong>R versão 4.0.0 ou posterior</strong>.</p>
+</div>
+</div>
+<p>Para verificar se a sua versão do R está atualizada:</p>
+<ul>
+<li><p>No Positron, a versão do R será exibida na <a href="https://docs.posit.co/ide/user/ide/guide/code/console.html">janela do console</a>. Ou execute <code>sessionInfo()</code> nela.</p></li>
+<li><p><strong>Para atualizar o R</strong>, baixe e instale a versão mais recente do <a href="https://cran.rstudio.com/">site do projeto R</a> para o seu sistema operacional.</p>
+<ul>
+<li><p>Após instalar uma nova versão, você terá que reinstalar todos os seus pacotes na nova versão.</p></li>
+<li><p>No Windows, o pacote <code>{installr}</code> pode atualizar sua versão do R e migrar sua biblioteca de pacotes.</p></li>
+</ul></li>
+<li><p><strong>Para atualizar o RStudio</strong>, abra o RStudio e clique em <code>Help &gt; Check for Updates</code>. Se uma nova versão estiver disponível, siga as instruções na tela.</p></li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Verifique atualizações regularmente
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Embora isso possa parecer intimidador, é <strong>muito mais comum</strong> ter problemas devido ao uso de versões desatualizadas do R ou de pacotes R. Manter-se atualizado com as versões mais recentes do R, do Positron e de quaisquer pacotes que você utiliza regularmente é uma boa prática.</p>
+</div>
+</div>
+</section>
+<section id="verificar-e-instalar-ferramentas-de-compilação-build-tools" class="level3">
+<h3 class="anchored" data-anchor-id="verificar-e-instalar-ferramentas-de-compilação-build-tools">2. Verificar e instalar ferramentas de compilação (Build Tools)</h3>
+<p>Alguns pacotes exigem um conjunto complementar de ferramentas para serem compilados. Abra o Positron e <strong>copie e cole</strong> o seguinte bloco de código na <a href="https://docs.posit.co/ide/user/ide/guide/code/console.html">janela do console</a>, depois pressione <kbd>Enter</kbd> (Windows e Linux) ou <kbd>Return</kbd> (macOS) para executar o comando:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pkgbuild"</span>)) <span class="fu">install.packages</span>(<span class="st">"pkgbuild"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pkgbuild<span class="sc">::</span><span class="fu">check_build_tools</span>(<span class="at">debug =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Esperamos uma mensagem como a apresentada abaixo:</p>
+<pre class="output"><code>Your system is ready to build packages!</code></pre>
+<p>Se as ferramentas de compilação não estiverem disponíveis, isso acionará uma instalação automatizada.</p>
+<ol type="1">
+<li>Execute o comando no console.</li>
+<li>Não interrompa o processo — espere até que o R exiba a mensagem de confirmação.</li>
+<li>Quando terminar, reinicie sua sessão do R (ou apenas reinicie o Positron) para garantir que as alterações tenham efeito.</li>
+</ol>
+<p>Se a instalação automática <strong>não</strong> funcionar, você poderá instalá-las manualmente de acordo com seu sistema operacional.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="" aria-current="page">Windows</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Mac</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Linux</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<p>Usuários de Windows precisarão de uma instalação funcional do <code>Rtools</code> para compilar o pacote a partir do código-fonte.<br>
+O <code>Rtools</code> não é um pacote R, mas sim um software que você precisa baixar e instalar. Sugerimos que você siga estes passos:</p>
+<ul>
+<li><strong>Instale o <code>Rtools</code></strong>. Baixe o instalador do <code>Rtools</code> em <a href="https://cran.r-project.org/bin/windows/Rtools/" class="uri">https://cran.r-project.org/bin/windows/Rtools/</a>. Instale com as opções padrão.</li>
+<li>Feche e reabra o Positron para que ele reconheça a nova instalação.</li>
+</ul>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<p>Usuários de Mac precisam de duas etapas adicionais, conforme detalhado neste <a href="https://github.com/stan-dev/rstan/wiki/Configuring-C---Toolchain-for-Mac">guia para Configurar a C Toolchain no Mac</a>:</p>
+<ul>
+<li>Instalar e usar o <a href="https://mac.thecoatlessprofessor.com/macrtools/"><code>macrtools</code></a> para configurar a toolchain de C++</li>
+<li>Habilitar algumas otimizações de compilador.</li>
+</ul>
+</div>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<p>Usuários de Linux precisam de detalhes específicos por distribuição. Consulte-os neste <a href="https://github.com/stan-dev/rstan/wiki/Configuring-C-Toolchain-for-Linux">guia para Configurar a C Toolchain no Linux</a>.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Verificação do ambiente
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Esta etapa requer privilégios de administrador para instalar softwares.</p>
+<p>Se você não tiver direitos de administrador em seu ambiente atual:</p>
+<ul>
+<li>Tente executar o tutorial em sua <strong>máquina pessoal</strong>, onde você tem acesso total.<br>
+</li>
+<li>Use um <strong>ambiente de desenvolvimento pré-configurado</strong> (por exemplo, <a href="https://posit.cloud/">Posit Cloud</a>).<br>
+</li>
+<li>Peça ao seu <strong>administrador de sistemas</strong> que instale o software necessário para você.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Linux: uma dependência de sistema que não aparece na lista">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Linux: uma dependência de sistema que não aparece na lista
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>O pacote <code>{epicontacts}</code>, usado no episódio sobre superspreading, depende de uma biblioteca de sistema que não é instalada junto com o R: a <strong><code>libglpk</code></strong>. Sem ela, <code>library(epicontacts)</code> falha com uma mensagem parecida com <code>libglpk.so.40: cannot open shared object file</code>.</p>
+<p>No Ubuntu ou Debian, instale antes de seguir:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install libglpk40</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</section>
+<section id="instalar-os-pacotes-r-necessários" class="level3">
+<h3 class="anchored" data-anchor-id="instalar-os-pacotes-r-necessários">3. Instalar os pacotes R necessários</h3>
+<!--
+During the tutorial, we will need a number of R packages. Packages contain useful R code written by other people. We will use packages from the [Epiverse-TRACE](https://epiverse-trace.github.io/).
+-->
+<p>Abra o Positron e <strong>copie e cole</strong> o seguinte bloco de código na <a href="https://docs.posit.co/ide/user/ide/guide/code/console.html">janela do console</a>, depois pressione <kbd>Enter</kbd> (Windows e Linux) ou <kbd>Return</kbd> (macOS) para executar o comando (se desejar usar o espelho brasileiro do CRAN para acelerar downloads, execute antes: <code>options(repos = c(CRAN = "https://cran-r.c3sl.ufpr.br/"))</code>):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre acessar atrasos e quantificar a transmissão</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>new_packages <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"EpiNow2"</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"epiparameter"</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"incidence2"</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"tidyverse"</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pkg_install</span>(new_packages)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre previsão e gravidade</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>new_packages <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"EpiNow2"</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"cfr"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"epiparameter"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"incidence2"</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"outbreaks"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"tidyverse"</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pkg_install</span>(new_packages)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre superspreading e cadeias de transmissão</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>new_packages <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"epicontacts"</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"fitdistrplus"</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"superspreading"</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"epichains"</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"epiparameter"</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"incidence2"</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"outbreaks"</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"tidyverse"</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pkg_install</span>(new_packages)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Estas etapas de instalação podem perguntar <code>? Do you want to continue (Y/n)</code>; digite <code>Y</code> e pressione <kbd>Enter</kbd>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<section id="você-recebeu-um-erro-com-o-pak" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="você-recebeu-um-erro-com-o-pak">Você recebeu um erro com o pak?</h3>
+<p>Tente usar a função clássica para instalar um pacote individual; por exemplo, para instalar <code>{cfr}</code>, execute:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"cfr"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<section id="você-precisa-de-um-personal-access-token-pat-do-github" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="você-precisa-de-um-personal-access-token-pat-do-github">Você precisa de um Personal Access Token (PAT) do GitHub?</h3>
+<p>Se a mensagem de erro incluir uma expressão como <code>Personal access token (PAT)</code>, você pode precisar <a href="https://epiverse-trace.github.io/git-rstudio-basics/02-setup.html#set-up-your-github-token">configurar seu token do GitHub</a>.</p>
+<p>Primeiro, instale estes pacotes R:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>new <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"gh"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">"gitcreds"</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">"usethis"</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(new)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Depois, siga estas três etapas para <a href="https://epiverse-trace.github.io/git-rstudio-basics/02-setup.html#set-up-your-github-token">configurar seu token do GitHub (leia este guia passo a passo)</a>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gerar um token</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>usethis<span class="sc">::</span><span class="fu">create_github_token</span>()</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Configurar seu token </span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>gitcreds<span class="sc">::</span><span class="fu">gitcreds_set</span>()</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Obter um relatório da situação</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>usethis<span class="sc">::</span><span class="fu">git_sitrep</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Tente instalar o {epiparameter} novamente:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">"remotes"</span>)) <span class="fu">install.packages</span>(<span class="st">"remotes"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"epiverse-trace/epiparameter"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Se o erro persistir, <a href="#your-questions">entre em contato conosco</a>!</p>
+</section>
+</div>
+</div>
+<p>Você deve atualizar <strong>todos os pacotes</strong> necessários para o tutorial, mesmo que os tenha instalado relativamente recentemente. Novas versões trazem melhorias e correções de bugs importantes.</p>
+</section>
+<section id="verificar-a-instalação" class="level3">
+<h3 class="anchored" data-anchor-id="verificar-a-instalação">4. Verificar a instalação</h3>
+<p>Quando a instalação terminar, você pode tentar carregar os pacotes colando o seguinte código no console:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre acessar atrasos e quantificar a transmissão</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(EpiNow2)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(incidence2)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre previsão e gravidade</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(EpiNow2)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cfr)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(incidence2)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># para os episódios sobre superspreading e cadeias de transmissão</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epicontacts)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(superspreading)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epichains)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(incidence2)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Se você NÃO vir um erro como <code>there is no package called ‘...’</code>, está tudo pronto! Se vir, <a href="#your-questions">entre em contato conosco</a>!</p>
+</section>
+<section id="assistir-e-ler-o-material-pré-curso" class="level3">
+<h3 class="anchored" data-anchor-id="assistir-e-ler-o-material-pré-curso">5. Assistir e ler o material pré-curso</h3>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<!--
+One paper introduction to Outbreak analytics:
+
+- Polonsky JA, Baidjoe A, Kamvar ZN, Cori A, Durski K, Edmunds WJ, Eggo RM, 
+Funk S, Kaiser L, Keating P, de Waroux OLP, Marks M, Moraga P, Morgan O, 
+Nouvellet P, Ratnayake R, Roberts CH, Whitworth J, Jombart T. 
+**Outbreak analytics: a developing data science for informing the response to emerging pathogens.** 
+Philos Trans R Soc Lond B Biol Sci. 2019 Jul 8;374(1776):20180276. 
+doi: 10.1098/rstb.2018.0276. PMID: 31104603; PMCID: PMC6558557.
+-->
+<p><strong>Assista</strong> a três revisões em vídeo de 5 minutos sobre distribuições estatísticas:</p>
+<ul>
+<li>StatQuest com Josh Starmer (2017) <strong>The Main Ideas behind Probability Distributions</strong>, YouTube. Disponível em: <a href="https://www.youtube.com/watch?v=oI3hZJqXJuc&amp;t" class="uri">https://www.youtube.com/watch?v=oI3hZJqXJuc&amp;t</a> <!--(Accessed: 30 October 2024).--></li>
+</ul>
+<!--
+- StatQuest with Josh Starmer (2015)
+**Confidence Intervals, Clearly Explained!!!**, YouTube.
+Available at: <https://www.youtube.com/watch?v=TqOeMYtOc1w>
+(Accessed: 04 November 2024).
+-->
+<ul>
+<li><p>StatQuest com Josh Starmer (2018) <strong>Probability is not Likelihood. Find out why!!!</strong>, YouTube. Disponível em: <a href="https://www.youtube.com/watch?v=pYxNSUDSFH4" class="uri">https://www.youtube.com/watch?v=pYxNSUDSFH4</a> <!--(Accessed: 30 October 2024).--></p></li>
+<li><p>StatQuest com Josh Starmer (2017) <strong>Maximum Likelihood, clearly explained!!!</strong>, YouTube. Disponível em: <a href="https://www.youtube.com/watch?v=XepXtl9YKwc" class="uri">https://www.youtube.com/watch?v=XepXtl9YKwc</a> <!--(Accessed: 30 October 2024).--></p></li>
+</ul>
+<!--
+- Weiss, J. (2012) 
+**R probability functions for the normal distribution**, 
+Lecture 13-Monday, October 8, 2012. 
+Available at: <https://sakai.unc.edu/access/content/group/3d1eb92e-7848-4f55-90c3-7c72a54e7e43/public/docs/lectures/lecture13.htm#probfunc>
+(Accessed: 30 October 2024). 
+-->
+<!--
+**Read** a two-page paper introduction to Infectious Disease Modelling:
+
+- Bjørnstad ON, Shea K, Krzywinski M, Altman N. 
+**Modeling infectious epidemics.** 
+Nat Methods. 2020 May;17(5):455-456. 
+doi: 10.1038/s41592-020-0822-z. PMID: 32313223.
+<https://www.nature.com/articles/s41592-020-0822-z>
+-->
+<!--
+- Bjørnstad ON, Shea K, Krzywinski M, Altman N. 
+**The SEIRS model for infectious disease dynamics.** 
+Nat Methods. 2020 Jun;17(6):557-558. doi: 10.1038/s41592-020-0856-2.
+<https://www.nature.com/articles/s41592-020-0856-2>
+Erratum in: Nat Methods. 2021 Mar;18(3):321. PMID: 32499633.
+
+- McVernon, J. et al. (2016) 
+**A user’s Guide to Infectious Disease Modelling**, Prism. 
+Available at: http://prism.edu.au/publications/prism-modeling-guideline/ 
+(Accessed: 14 March 2024).
+-->
+</div>
+</div>
+</section>
+</section>
+<section id="conjuntos-de-dados" class="level2">
+<h2 class="anchored" data-anchor-id="conjuntos-de-dados">Conjuntos de dados</h2>
+<section id="baixar-os-dados" class="level3">
+<h3 class="anchored" data-anchor-id="baixar-os-dados">Baixar os dados</h3>
+<p>Faremos o download dos dados diretamente a partir do R durante o tutorial. No entanto, se você prevê problemas com a conexão de rede, pode ser melhor baixar os dados previamente e armazená-los em sua máquina.</p>
+<p>Os arquivos de dados para o tutorial podem ser baixados manualmente aqui:</p>
+<ul>
+<li><p>&lt;data/ebola_cases.csv&gt;</p></li>
+<li><p>&lt;data/sarscov2_cases_deaths.csv&gt;</p></li>
+</ul>
+</section>
+</section>
+<section id="your-questions" class="level2">
+<h2 class="anchored" data-anchor-id="your-questions">Suas dúvidas</h2>
+<p>Se precisar de ajuda para instalar os softwares ou tiver qualquer outra dúvida sobre este tutorial, envie um e-mail para <a href="mailto:andree.valle-campos@lshtm.ac.uk" class="email">andree.valle-campos@lshtm.ac.uk</a></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./index.html" class="pagination-link" aria-label="Análise em tempo real e previsão para surtos com R">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./episodios/01-acessar-atrasos.html" class="pagination-link" aria-label="Acessar distribuições de atraso epidemiológicas">
+        <span class="nav-page-text"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/setup.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

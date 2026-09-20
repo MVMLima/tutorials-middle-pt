@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Apêndice D — Glossário de termos: Epiverse-TRACE – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./instrutor.html" rel="next">
+<link href="./perfis.html" rel="prev">
+<link href="./img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./notas/equacao-de-renovacao.html">Apêndices</a></li><li class="breadcrumb-item"><a href="./glossario.html"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./glossario.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#a" id="toc-a" class="nav-link active" data-scroll-target="#a">A</a></li>
+  <li><a href="#c" id="toc-c" class="nav-link" data-scroll-target="#c">C</a></li>
+  <li><a href="#d" id="toc-d" class="nav-link" data-scroll-target="#d">D</a></li>
+  <li><a href="#e" id="toc-e" class="nav-link" data-scroll-target="#e">E</a></li>
+  <li><a href="#h" id="toc-h" class="nav-link" data-scroll-target="#h">H</a></li>
+  <li><a href="#i" id="toc-i" class="nav-link" data-scroll-target="#i">I</a></li>
+  <li><a href="#m" id="toc-m" class="nav-link" data-scroll-target="#m">M</a></li>
+  <li><a href="#n" id="toc-n" class="nav-link" data-scroll-target="#n">N</a></li>
+  <li><a href="#p" id="toc-p" class="nav-link" data-scroll-target="#p">P</a></li>
+  <li><a href="#t" id="toc-t" class="nav-link" data-scroll-target="#t">T</a></li>
+  <li><a href="#v" id="toc-v" class="nav-link" data-scroll-target="#v">V</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/glossario.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./notas/equacao-de-renovacao.html">Apêndices</a></li><li class="breadcrumb-item"><a href="./glossario.html"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Apêndice D — Glossário de termos: Epiverse-TRACE</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="a" class="level2">
+<h2 class="anchored" data-anchor-id="a">A</h2>
+<dl>
+<dt><span id="outbreakanalytics">Análise de surtos</span></dt>
+<dd>
+Um campo especializado dentro da ciência de dados que se concentra nos aspectos tecnológicos e metodológicos do pipeline de dados de surtos. Isso inclui a coleta sistemática, análise, modelagem e comunicação de dados para orientar a resposta a surtos (<a href="https://royalsocietypublishing.org/doi/full/10.1098/rstb.2018.0276">Polonsky et al., 2019</a>).
+</dd>
+<dt><span id="reportingdelay">Atraso de notificação</span></dt>
+<dd>
+Atraso ou defasagem entre o momento em que um evento ocorre (por exemplo, início dos sintomas) e o momento em que é notificado (<a href="https://www.jstor.org/stable/3315820">Lawless, 1994</a>). Podemos quantificá-lo comparando a linelist com versões sucessivas dela mesma ou com contagens agregadas de casos notificados atualizadas (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al.&nbsp;2017</a>).
+</dd>
+</dl>
+<!-- ## B -->
+</section>
+<section id="c" class="level2">
+<h2 class="anchored" data-anchor-id="c">C</h2>
+<dl>
+<dt><span id="cplusplus">C++</span></dt>
+<dd>
+C++ é uma linguagem de programação de alto nível que pode ser usada dentro do R para acelerar partes do código. Para saber mais sobre C++, consulte estes <a href="https://cplusplus.com/doc/tutorial/">tutoriais</a> e saiba mais sobre a integração entre C++ e R <a href="https://www.rcpp.org/">aqui</a>.
+</dd>
+<dt><span id="censoring">Censura</span></dt>
+<dd>
+Significa que sabemos que um evento aconteceu, mas não sabemos exatamente quando aconteceu. A maioria dos dados epidemiológicos é “duplamente censurada” porque há incerteza em torno dos momentos tanto do evento primário quanto do secundário. Não levar em conta a censura pode levar a estimativas enviesadas do desvio padrão do atraso (<a href="https://github.com/parksw3/epidist-paper">Park et al., em andamento</a>). Diferentes abordagens de amostragem podem gerar vieses devido à censura à esquerda e à direita na estimativa do intervalo serial, o que pode propagar viés para a estimativa do <a href="#incubation">período de incubação</a> e do tempo de geração (<a href="https://www.nature.com/articles/s41467-022-35496-8/figures/2">Chen et al., 2022</a>).
+</dd>
+<dt><span id="initial">Condições iniciais</span></dt>
+<dd>
+Em <a href="#ordinary">EDOs</a>, as condições iniciais são os valores das variáveis de estado no início da simulação do modelo (no tempo 0). Por exemplo, se houver um indivíduo infeccioso em uma população de 1000 pessoas em um modelo Suscetível-Infectado-Recuperado, as condições iniciais seriam <span class="math inline">\(S(0) = 999\)</span>, <span class="math inline">\(I(0) = 1\)</span>, <span class="math inline">\(R(0) = 0\)</span>.
+</dd>
+</dl>
+</section>
+<section id="d" class="level2">
+<h2 class="anchored" data-anchor-id="d">D</h2>
+<dl>
+<dt><span id="delaydist">Distribuição de atraso</span></dt>
+<dd>
+Distribuição de probabilidade de um período de tempo epidemiológico fundamental (<a href="https://www.sciencedirect.com/science/article/pii/S2468042722000537#fig5">Althobait et al., 2022, Figuras 5 e 6</a>). Para um resumo completo dos principais períodos epidemiológicos, consulte <a href="https://www.sciencedirect.com/science/article/pii/S2468042721000038/#fig4">Xiang et al., 2021</a>. Os <a href="https://epiverse-trace.github.io/tutorials-middle/delays-access.html">tutoriais de tarefas intermediárias</a> contêm episódios sobre este tópico.
+</dd>
+<dt><span id="offspringdist">Distribuição de casos secundários</span></dt>
+<dd>
+Distribuição do número de casos secundários causados por um indivíduo infectado específico. (<a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>, <a href="https://wellcomeopenresearch.org/articles/5-67/v3">Endo et al., 2020</a>).
+</dd>
+</dl>
+</section>
+<section id="e" class="level2">
+<h2 class="anchored" data-anchor-id="e">E</h2>
+<dl>
+<dt><span id="viralshedding">Eliminação viral</span></dt>
+<dd>
+O processo de liberação de um vírus de uma célula ou do corpo para o ambiente, onde ele pode infectar outras pessoas. (<a href="https://dictionary.cambridge.org/us/dictionary/english/shedding">Cambridge Dictionary, 2023</a>).
+</dd>
+<dt><span id="ordinary">Equações diferenciais ordinárias</span></dt>
+<dd>
+Equações diferenciais ordinárias (EDOs) podem ser usadas para representar a taxa de variação de uma variável (por exemplo, número de indivíduos infectados) em relação a outra (por exemplo, tempo). Confira esta introdução às <a href="https://mathinsight.org/ordinary_differential_equation_introduction">EDOs</a>. As EDOs são amplamente utilizadas na modelagem de doenças infecciosas para modelar o fluxo de indivíduos entre diferentes estados da doença.
+</dd>
+</dl>
+<!-- ## F -->
+<!-- ## G -->
+</section>
+<section id="h" class="level2">
+<h2 class="anchored" data-anchor-id="h">H</h2>
+<dl>
+<dt><span id="naturalhistory">História natural da doença</span></dt>
+<dd>
+Refere-se à evolução da doença do início ao fim sem qualquer tratamento ou intervenção. De fato, dada a nocividade de uma epidemia, medidas de tratamento ou intervenção são inevitáveis. Portanto, é difícil que a história natural de uma doença não seja afetada pelos diversos fatores intervenientes. (<a href="https://www.sciencedirect.com/science/article/pii/S2468042721000038">Xiang et al., 2021</a>).
+</dd>
+</dl>
+</section>
+<section id="i" class="level2">
+<h2 class="anchored" data-anchor-id="i">I</h2>
+<dl>
+<dt><span id="bayesian">Inferência bayesiana</span></dt>
+<dd>
+Um tipo de inferência estatística em que crenças a priori são atualizadas com o uso de dados observados. <a href="https://en.wikipedia.org/wiki/Bayesian_inference">Mais informações sobre inferência bayesiana</a>.
+</dd>
+<dt><span id="NPIs">Intervenções não farmacológicas</span></dt>
+<dd>
+Intervenções não farmacológicas (NPIs) são medidas implementadas para reduzir a transmissão que não incluem a administração de medicamentos ou vacinas. <a href="https://www.gov.uk/government/publications/technical-report-on-the-covid-19-pandemic-in-the-uk/chapter-8-non-pharmaceutical-interventions">Mais informações sobre NPIs</a>.
+</dd>
+<dt><span id="serialinterval">Intervalo serial</span></dt>
+<dd>
+O intervalo de tempo entre o início dos sintomas de um caso primário e de um caso secundário. Ele pode ser negativo quando ocorre infecção pré-sintomática. Mais frequentemente, a distribuição do intervalo serial de uma infecção é usada para estimar a distribuição do <a href="#generationtime">tempo de geração</a> (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">(Cori et al., 2017)</a>). A relação entre o intervalo serial e o <a href="#incubation">período de incubação</a> ajuda a definir o tipo de transmissão da infecção (sintomática ou pré-sintomática) (<a href="https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2">Nishiura et al.&nbsp;(2020)</a>).
+</dd>
+</dl>
+<!-- ## J -->
+<!-- ## K -->
+<!-- ## L -->
+</section>
+<section id="m" class="level2">
+<h2 class="anchored" data-anchor-id="m">M</h2>
+<dl>
+<dt><span id="contact">Matriz de contato</span></dt>
+<dd>
+A matriz de contato é uma matriz quadrada composta por linhas e colunas iguais ao número de faixas etárias. Cada elemento representa a frequência de contatos entre faixas etárias. Se considerarmos que a transmissão de uma infecção é impulsionada pelo contato e que as taxas de contato são muito diferentes para diferentes faixas etárias, especificar uma matriz de contato nos permite levar em conta taxas de transmissão específicas por idade.
+</dd>
+<dt><span id="deterministic">Modelo determinístico</span></dt>
+<dd>
+Modelos que sempre terão a mesma trajetória para determinadas condições iniciais e valores de parâmetros. Exemplos incluem equações diferenciais ordinárias e equações de diferenças.
+</dd>
+<dt><span id="stochastic">Modelo estocástico</span></dt>
+<dd>
+Um modelo que inclui algum processo estocástico, resultando em variação nas simulações do modelo para as mesmas condições iniciais e valores de parâmetros. Exemplos incluem equações diferenciais estocásticas e modelos de processos de ramificação. Para mais detalhes, veja <a href="https://doi.org/10.1016/j.idm.2017.03.001">Allen (2017)</a>.
+</dd>
+</dl>
+</section>
+<section id="n" class="level2">
+<h2 class="anchored" data-anchor-id="n">N</h2>
+<dl>
+<dt><span id="basic">Número de reprodução básico</span></dt>
+<dd>
+Uma medida da transmissibilidade de uma doença. Definido como o número médio de casos secundários gerados a partir de um caso infectado inicial em uma população inteiramente suscetível. <a href="https://en.wikipedia.org/wiki/Basic_reproduction_number">Mais informações sobre o número de reprodução básico</a>.
+</dd>
+<dt><span id="effectiverepro">Número de reprodução efetivo</span></dt>
+<dd>
+O número de reprodução variante no tempo ou efetivo (<span class="math inline">\(R_t\)</span>) é semelhante ao <a href="#basic">número de reprodução básico</a> (<span class="math inline">\(R_0\)</span>), mas o <span class="math inline">\(R_t\)</span> mede o número de pessoas infectadas por pessoa infecciosa quando parte da população já foi infectada. Leia mais sobre a <a href="https://wwwnc.cdc.gov/eid/article/29/8/22-1445_article">etimologia do número de reprodução em Sharma et al., 2023</a>.
+</dd>
+</dl>
+<!-- ## O -->
+</section>
+<section id="p" class="level2">
+<h2 class="anchored" data-anchor-id="p">P</h2>
+<dl>
+<dt><span id="parsode">Parâmetros do modelo (EDOs)</span></dt>
+<dd>
+Os parâmetros do modelo são usados em modelos de <a href="#ordinary">equações diferenciais ordinárias</a> para descrever o fluxo entre estados da doença. Por exemplo, uma taxa de transmissão <span class="math inline">\(\beta\)</span> é um parâmetro do modelo que pode ser usado para descrever o fluxo entre os estados suscetível e infeccioso.
+</dd>
+<dt><span id="incubation">Período de incubação</span></dt>
+<dd>
+O tempo entre ser infectado e o início dos sintomas. <a href="https://en.wikipedia.org/wiki/Latent_period_(epidemiology)#Incubation_period">Mais informações sobre o período de incubação</a>. Ele pode ser diferente do <a href="#latent">período latente</a>, como mostrado na Figura 4 de (<a href="https://www.sciencedirect.com/science/article/pii/S2468042721000038#fig4">Xiang et al.&nbsp;(2021)</a>). A relação entre o período de incubação e o <a href="#serialinterval">intervalo serial</a> ajuda a definir o tipo de transmissão da infecção (sintomática ou pré-sintomática) (<a href="https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2">Nishiura et al.&nbsp;(2020)</a>).
+</dd>
+<dt><span id="infectiousness">Período de infecciosidade</span></dt>
+<dd>
+Também conhecido como duração da infecciosidade. Período de tempo entre o início e o fim da <a href="#viralshedding">eliminação viral</a> infecciosa. A carga viral e a detecção de vírus infeccioso são os dois parâmetros fundamentais para estimar a infecciosidade (<a href="https://www.nature.com/articles/s41579-022-00822-w">Puhach et al., 2022</a> e <a href="https://www.thelancet.com/journals/lanres/article/PIIS2213-2600(22)00226-0/fulltext">Hakki et al., 2022</a>](img/infectiousness-covid19.jpg)).
+</dd>
+<dt><span id="latent">Período latente</span></dt>
+<dd>
+O tempo entre ser infectado e o início da infecciosidade. Ele pode ser diferente do <a href="#incubation">período de incubação</a>, como mostrado na Figura 4 de (<a href="https://www.sciencedirect.com/science/article/pii/S2468042721000038#fig4">Xiang et al., 2021</a>).
+</dd>
+<dt><span id="prediction">Predição</span></dt>
+<dd>
+Equivalente a previsão (exceto no sentido estatístico, em que predições podem se referir a quaisquer dados não observados, inclusive do passado).
+</dd>
+<dt><span id="forecast">Previsão</span></dt>
+<dd>
+Uma declaração sobre o futuro, isto é, informando probabilidades previstas para desfechos futuros (em uma previsão determinística, essa probabilidade = 1).
+</dd>
+<dt><span id="projection">Projeção</span></dt>
+<dd>
+O mesmo que “simulação”, isto é, um modelo projetado para o futuro; muitas vezes, mas não necessariamente sempre, assumindo que as condições permanecerão as mesmas. Uma projeção pode ser usada como uma previsão.
+</dd>
+</dl>
+<!-- ## Q -->
+<!-- ## R -->
+<!-- ## S -->
+</section>
+<section id="t" class="level2">
+<h2 class="anchored" data-anchor-id="t">T</h2>
+<dl>
+<dt><span id="growth">Taxa de crescimento</span></dt>
+<dd>
+A taxa de crescimento exponencial indica o quanto os casos estão aumentando ou diminuindo no início de uma epidemia. Ela nos fornece uma medida da velocidade de transmissão, veja <a href="https://royalsocietypublishing.org/doi/full/10.1098/rspb.2020.1556">Dushoff &amp; Park, 2021</a>.
+</dd>
+<dt><span id="generationtime">Tempo de geração</span></dt>
+<dd>
+Tempo entre o início da infecciosidade de um caso primário e de seu caso secundário. Esse valor sempre precisa ser positivo. A distribuição do tempo de geração é comumente estimada a partir de dados sobre a distribuição do <a href="#serialinterval">intervalo serial</a> de uma infecção (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al.&nbsp;2017</a>).
+</dd>
+</dl>
+<!-- This can produced biased estimates. ([Knight et al., 2020](https://www.sciencedirect.com/science/article/pii/S2468042720300634)) -->
+<dl>
+<dt><span id="direct">Transmissão direta</span></dt>
+<dd>
+Indivíduos são infectados por meio do contato direto com outros humanos infectados. Infecções transmitidas por via aérea são frequentemente modeladas como infecções de transmissão direta, pois exigem contato próximo com indivíduos infectados para que ocorra a transmissão.
+</dd>
+<dt><span id="indirect">Transmissão indireta</span></dt>
+<dd>
+Infecções transmitidas indiretamente são passadas para humanos por meio do contato com vetores, animais ou ambiente contaminado. Infecções transmitidas por vetores, zoonoses e infecções de veiculação hídrica são modeladas como indiretamente transmitidas.
+</dd>
+<dt><span id="vectorborne">Transmissão por vetores</span></dt>
+<dd>
+Transmissão por vetores significa que uma infecção pode ser transmitida de um vetor (por exemplo, mosquitos) para humanos. Exemplos de doenças transmitidas por vetores incluem malária e dengue. A Organização Mundial da Saúde possui uma <a href="https://www.who.int/news-room/fact-sheets/detail/vector-borne-diseases">ficha informativa sobre doenças transmitidas por vetores</a> com informações essenciais e uma lista delas de acordo com o vetor.
+</dd>
+<dt><span id="airborne">Transmissão por via aérea</span></dt>
+<dd>
+Indivíduos são infectados por meio do contato com partículas infecciosas no ar. Exemplos incluem influenza e COVID-19. Atler et al.&nbsp;(2023) discutem os <a href="https://www.ncbi.nlm.nih.gov/books/NBK531468/">fatores e procedimentos de manejo</a> da transmissão por via aérea.
+</dd>
+<dt><span id="truncation">Truncamento (à direita)</span></dt>
+<dd>
+Tipo de viés de amostragem relacionado ao processo de coleta de dados. Ocorre porque apenas casos que já foram notificados podem ser observados. Não levar em conta o truncamento à direita durante a fase de crescimento de uma epidemia pode levar à subestimação do atraso médio (<a href="https://github.com/parksw3/epidist-paper">Park et al., em andamento</a>).
+</dd>
+</dl>
+<!-- ## U -->
+</section>
+<section id="v" class="level2">
+<h2 class="anchored" data-anchor-id="v">V</h2>
+<dl>
+<dt><span id="state">Variáveis de estado</span></dt>
+<dd>
+As variáveis de estado em um modelo representado por <a href="#ordinary">equações diferenciais ordinárias</a> são os estados da doença nos quais os indivíduos podem estar; por exemplo, se os indivíduos puderem estar suscetíveis, infecciosos ou recuperados, as variáveis de estado serão <span class="math inline">\(S\)</span>, <span class="math inline">\(I\)</span> e <span class="math inline">\(R\)</span>. Há uma equação diferencial ordinária para cada variável de estado.
+</dd>
+<dt><span id="phasebias">Viés de fase (dinâmica ou epidêmica)</span></dt>
+<dd>
+Leva em conta a suscetibilidade da população nos momentos em que os pares de transmissão são observados. É um tipo de viés de amostragem. Afeta dados retrospectivos e está relacionado à fase da epidemia: durante a fase de crescimento exponencial, os casos que desenvolveram sintomas recentemente estão sobrerrepresentados nos dados observados, enquanto durante a fase de declínio, esses casos estão sub-representados, levando à estimativa de intervalos de atraso mais curtos e mais longos, respectivamente. (<a href="https://github.com/parksw3/epidist-paper">Park et al., em andamento</a>).
+</dd>
+</dl>
+<!-- ## W -->
+<!-- ## X -->
+<!-- ## Y -->
+<!-- ## Z -->
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./perfis.html" class="pagination-link" aria-label="Para quem são estes tutoriais">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Para quem são estes tutoriais</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./instrutor.html" class="pagination-link" aria-label="Notas para quem conduz a oficina">
+        <span class="nav-page-text"><span class="chapter-title">Notas para quem conduz a oficina</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/glossario.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

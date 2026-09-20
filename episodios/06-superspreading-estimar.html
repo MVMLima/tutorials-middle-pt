@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Levar em conta o superspreading – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../episodios/07-superspreading-simular.html" rel="next">
+<link href="../episodios/05-severidade-estatica.html" rel="prev">
+<link href="../img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../episodios/06-superspreading-estimar.html"><span class="chapter-title">Levar em conta o superspreading</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#introdução" id="toc-introdução" class="nav-link active" data-scroll-target="#introdução">Introdução</a></li>
+  <li><a href="#o-número-de-reprodução-individual" id="toc-o-número-de-reprodução-individual" class="nav-link" data-scroll-target="#o-número-de-reprodução-individual">O número de reprodução individual</a></li>
+  <li><a href="#estimar-o-parâmetro-de-dispersão" id="toc-estimar-o-parâmetro-de-dispersão" class="nav-link" data-scroll-target="#estimar-o-parâmetro-de-dispersão">Estimar o parâmetro de dispersão</a></li>
+  <li><a href="#controlar-o-superspreading-com-o-rastreamento-de-contatos" id="toc-controlar-o-superspreading-com-o-rastreamento-de-contatos" class="nav-link" data-scroll-target="#controlar-o-superspreading-com-o-rastreamento-de-contatos">Controlar o superspreading com o rastreamento de contatos</a></li>
+  <li><a href="#probabilidade-de-casos-em-um-determinado-aglomerado" id="toc-probabilidade-de-casos-em-um-determinado-aglomerado" class="nav-link" data-scroll-target="#probabilidade-de-casos-em-um-determinado-aglomerado">Probabilidade de casos em um determinado aglomerado</a></li>
+  <li><a href="#desafios" id="toc-desafios" class="nav-link" data-scroll-target="#desafios">Desafios</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/06-superspreading-estimar.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Levar em conta o superspreading</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled" title="Dois arquivos que este episódio cria na pasta do projeto">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dois arquivos que este episódio cria na pasta do projeto
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ao renderizar este episódio, o <code>{webshot}</code> renderiza o grafo interativo em imagem e deixa dois arquivos na raiz do projeto: <code>network.html</code> (o grafo navegável) e <code>webshot.png</code> (a imagem usada no texto). Eles são <strong>efeito colateral</strong> do render, não material do curso — estão no <code>.gitignore</code>. A primeira execução também baixa o PhantomJS, o que exige conexão com a internet.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Perguntas">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Perguntas
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Como podemos estimar a variação na transmissão em nível individual (ou seja, o potencial de superspreading) a partir de dados de rastreamento de contatos?</li>
+<li>Quais são as implicações da variação na transmissão para a tomada de decisão?</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Objetivos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Objetivos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Estimar a distribuição de transmissões subsequentes a partir de indivíduos infectados (ou seja, a distribuição de casos secundários) a partir de dados de surtos usando o <code>{epicontacts}</code>.</li>
+<li>Estimar a magnitude da variação em nível individual (ou seja, o parâmetro de dispersão) da distribuição de casos secundários usando o <code>{fitdistrplus}</code>.</li>
+<li>Estimar a proporção de transmissão que está ligada a “eventos de superdisseminação” usando o <code>{superspreading}</code>.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Os participantes devem se familiarizar com os seguintes conceitos prévios antes de trabalhar neste tutorial:</p>
+<p><strong>Estatística</strong>: distribuições de probabilidade comuns, particularmente Poisson e binomial negativa.</p>
+<p><strong>Teoria epidêmica</strong>: O número de reprodução, R.</p>
+<p><strong>Pacotes de R instalados</strong>: <code>{epicontacts}</code>, <code>{fitdistrplus}</code>, <code>{superspreading}</code>, <code>{outbreaks}</code>, <code>{tidyverse}</code>.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Instale os pacotes caso ainda não estejam instalados (no Brasil, você pode configurar o espelho do CRAN com <code>options(repos = c(CRAN = "https://cran-r.c3sl.ufpr.br/"))</code>).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>base<span class="sc">::</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">"epicontacts"</span>, <span class="st">"fitdistrplus"</span>, <span class="st">"superspreading"</span>, <span class="st">"outbreaks"</span>, <span class="st">"tidyverse"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Se você encontrar alguma mensagem de erro, acesse a <a href="../setup.html#software-setup">página principal de configuração</a>.</p>
+</div>
+</div>
+</div>
+<section id="introdução" class="level2">
+<h2 class="anchored" data-anchor-id="introdução">Introdução</h2>
+<!-- we know -->
+<p>Da varíola ao coronavírus 2 da síndrome respiratória aguda grave (SARS-CoV-2), alguns indivíduos infectados transmitem a infecção para mais pessoas do que outros. A transmissão de doenças é o resultado de uma combinação de fatores biológicos e sociais, e esses fatores se equilibram em médias, até certo ponto, no nível populacional durante uma grande epidemia. Por isso, pesquisadores frequentemente usam médias populacionais para avaliar o potencial de disseminação da doença. No entanto, nas fases iniciais ou finais de um surto, as diferenças individuais na infecciosidade podem ser mais importantes. Em particular, elas aumentam a chance de eventos de superdisseminação (SSEs), que podem desencadear epidemias explosivas e também influenciar as chances de controlar a transmissão (<a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/see-intro-superspreading.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Cadeias de transmissão de SARS-CoV-2 em Hong Kong iniciadas por casos locais ou importados.</strong> (<strong>a</strong>), Rede de transmissão de um aglomerado de casos rastreados até um conjunto de quatro bares em Hong Kong (n = 106). (<strong>b</strong>), Rede de transmissão associada a um casamento sem pares infector-infectado claros, mas vinculada a uma reunião social anterior e a uma fonte local (n = 22). (<strong>c</strong>), Rede de transmissão associada a um aglomerado em um templo de fonte indeterminada (n = 19). (<strong>d</strong>), Todos os outros aglomerados de infecções por SARS-CoV-2 em que a fonte e a cadeia de transmissão puderam ser determinadas (<a href="https://www.nature.com/articles/s41591-020-1092-0">Adam et al., 2020</a>).</figcaption>
+</figure>
+</div>
+<!-- we dont know -->
+<p>O <a href="../glossario.html#basic">número de reprodução básico</a>, <span class="math inline">\(R_{0}\)</span>, mede o número médio de casos causados por um indivíduo infeccioso em uma população totalmente suscetível. As estimativas de <span class="math inline">\(R_{0}\)</span> são úteis para compreender a dinâmica média de uma epidemia no nível populacional, mas podem ocultar uma variação individual considerável na infecciosidade. Isso foi evidenciado durante a emergência global do SARS-CoV-2 por numerosos ‘eventos de superdisseminação’, nos quais determinados indivíduos infecciosos geraram um número extraordinariamente alto de casos secundários (<a href="https://wellcomeopenresearch.org/articles/5-83">Leclerc et al., 2020</a>).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/see-intro-secondary-cases-fig-b.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Distribuição observada de casos secundários da transmissão de SARS-CoV-2 em Hong Kong.</strong> N = 91 infectores por SARS-CoV-2, N = 153 infectados terminais e N = 46 casos locais esporádicos. As barras do histograma indicam a proporção de transmissões subsequentes por quantidade de casos secundários. A linha corresponde a uma distribuição binomial negativa ajustada (<a href="https://www.nature.com/articles/s41591-020-1092-0">Adam et al., 2020</a>).</figcaption>
+</figure>
+</div>
+<!-- we want -->
+<p>Neste tutorial, vamos quantificar a variação individual na transmissão e, assim, estimar o potencial para eventos de superdisseminação. Em seguida, usaremos essas estimativas para explorar as implicações do superspreading para intervenções de rastreamento de contatos.</p>
+<p>Usaremos dados do pacote <code>{outbreaks}</code>, gerenciaremos os dados de linelist e contatos usando o <code>{epicontacts}</code> e estimaremos os parâmetros da distribuição com o <code>{fitdistrplus}</code>. Por fim, usaremos o <code>{superspreading}</code> para explorar as implicações da variação na transmissão para a tomada de decisão.</p>
+<p>Usaremos o pipe <code>%&gt;%</code> para conectar algumas das funções desses pacotes, portanto, vamos também carregar o pacote <code>{tidyverse}</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epicontacts)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(superspreading)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="os-dois-pontos-duplos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="os-dois-pontos-duplos">Os dois-pontos duplos</h3>
+<p>Os dois-pontos duplos <code>::</code> no R permitem chamar uma função específica de um pacote sem carregar o pacote inteiro no ambiente atual. O pacote precisa estar instalado.</p>
+<p>Por exemplo, <code>dplyr::filter(data, condition)</code> usa <code>filter()</code> do pacote <code>{dplyr}</code>.</p>
+<p>Isso nos ajuda a lembrar as funções dos pacotes e a evitar conflitos de espaço de nomes (<em>namespaces</em>).</p>
+</section>
+</div>
+</section>
+<section id="o-número-de-reprodução-individual" class="level2">
+<h2 class="anchored" data-anchor-id="o-número-de-reprodução-individual">O número de reprodução individual</h2>
+<p>O número de reprodução varia em nível individual; ou seja, o número de infecções secundárias varia de um indivíduo infectado para outro. A métrica estatística que captura essa variação em nível individual é chamada de <em>número de reprodução individual</em>. Trata-se de uma variável aleatória que representa o número de infecções secundárias causadas por um indivíduo infectado específico (<a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>).</p>
+<p>Para estimar a distribuição dessa variável aleatória na prática, no início de um surto podemos usar dados de contatos para reconstruir cadeias de transmissão (isto é, quem infectou quem) e calcular o número de casos secundários gerados por cada indivíduo. Essa reconstrução de eventos de transmissão vinculados a partir de dados de contatos pode fornecer uma compreensão sobre como diferentes indivíduos contribuíram para a transmissão durante uma epidemia (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al., 2017</a>).</p>
+<p>Vamos praticar isso usando os dados de linelist e contatos de <code>mers_korea_2015</code> do pacote <code>{outbreaks}</code> e integrá-los com o pacote <code>{epicontacts}</code> para calcular a distribuição de casos secundários durante o surto de MERS-CoV de 2015 na Coreia do Sul (<a href="https://community.appliedepi.org/t/estimating-the-degree-of-super-spreading-from-transmission-chain-data/103/2">Campbell, 2022</a>):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="do">## primeiro, cria um objeto epicontacts</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>epi_contacts <span class="ot">&lt;-</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  epicontacts<span class="sc">::</span><span class="fu">make_epicontacts</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">linelist =</span> outbreaks<span class="sc">::</span>mers_korea_2015<span class="sc">$</span>linelist,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">contacts =</span> outbreaks<span class="sc">::</span>mers_korea_2015<span class="sc">$</span>contacts,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">directed =</span> <span class="cn">TRUE</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Com o argumento <code>directed = TRUE</code>, configuramos um grafo direcionado. Essas direções incorporam nossa hipótese sobre o par <strong>infector-infectado</strong>: do paciente fonte provável para o caso secundário.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># visualiza a rede de contatos</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(epi_contacts)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="06-superspreading-estimar_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<section id="os-dados-de-contato-são-tidy" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="os-dados-de-contato-são-tidy">Os dados de contato são tidy?</h3>
+<p>Os dados de contatos de uma cadeia de transmissão podem fornecer informações sobre quais indivíduos infectados entraram em contato com outros. Esperamos ter o infector (<code>from</code>) e o infectado (<code>to</code>), além de colunas adicionais de variáveis relacionadas ao contato, como local (<code>exposure</code>) e data do contato.</p>
+<p>Seguindo os princípios de <a href="https://tidyr.tidyverse.org/articles/tidy-data.html#tidy-data">tidy data</a> (dados organizados), a unidade de observação no nosso data frame de contatos é o par <strong>infector-infectado</strong>. Embora um infector possa infectar múltiplos infectados, em investigações de rastreamento de contatos podemos registrar contatos vinculados a mais de um infector (por exemplo, dentro de um domicílio). Mas devemos esperar ter pares infector-infectado únicos, porque tipicamente cada pessoa infectada terá adquirido a infecção de apenas uma outra.</p>
+<p>Para garantir esses pares únicos, podemos verificar a existência de repetições para os infectados:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># nenhum par infector-infectado está duplicado</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>epi_contacts <span class="sc">%&gt;%</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">pluck</span>(<span class="st">"contacts"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(to) <span class="sc">%&gt;%</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(dplyr<span class="sc">::</span><span class="fu">n</span>() <span class="sc">&gt;</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 4
+# Groups:   to [2]
+  from  to     exposure       diff_dt_onset
+  &lt;chr&gt; &lt;chr&gt;  &lt;fct&gt;                  &lt;int&gt;
+1 SK_16 SK_107 Emergency room            17
+2 SK_87 SK_107 Emergency room             2
+3 SK_14 SK_39  Hospital room             16
+4 SK_11 SK_39  Hospital room             13
+5 SK_12 SK_39  Hospital room             12</code></pre>
+</div>
+</div>
+</section>
+</div>
+</div>
+<p>Nosso objetivo é obter o número de casos secundários causados pelos indivíduos infectados observados. No data frame de contatos, quando cada par infector-infectado é único, o número de linhas por infector corresponde ao número de casos secundários gerados por aquele indivíduo.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># conta casos secundários por infector em contatos</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>epi_contacts <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">pluck</span>(<span class="st">"contacts"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">count</span>(from, <span class="at">name =</span> <span class="st">"secondary_cases"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     from secondary_cases
+1    SK_1              26
+2   SK_11               1
+3  SK_118               1
+4   SK_12               1
+5  SK_123               1
+6   SK_14              38
+7   SK_15               4
+8   SK_16              21
+9    SK_6               2
+10  SK_76               2
+11  SK_87               1</code></pre>
+</div>
+</div>
+<p>Mas essa saída contém apenas o número de casos secundários para os infectores notificados nos dados de contatos, e não para <strong>todos</strong> os indivíduos no objeto <code>&lt;epicontacts&gt;</code> como um todo.</p>
+<p>Em vez disso, a partir do <code>{epicontacts}</code> podemos usar a função <code>epicontacts::get_degree()</code>. O argumento <code>type = "out"</code> obtém o <strong>grau de saída</strong> (<em>out-degree</em>) de cada <strong>nó</strong> na rede de contatos a partir do objeto da classe <code>&lt;epicontacts&gt;</code>. Em uma rede direcionada, o grau de saída é o número de arestas saintes (infectados) que emanam de um nó (infector) (<a href="https://mathinsight.org/definition/node_degree">Nykamp DQ, acesso: 2025</a>).</p>
+<p>Além disso, o argumento <code>only_linelist = TRUE</code> incluirá apenas os indivíduos no data frame de linelist. Durante investigações de surtos, esperamos um registro de <strong>todos</strong> os indivíduos infectados observados nos dados de linelist. No entanto, qualquer pessoa não vinculada a um potencial infector ou infectado não aparecerá nos dados de contatos. Assim, o argumento <code>only_linelist = TRUE</code> nos protegerá contra a omissão desse último grupo de indivíduos ao contar o número de casos secundários causados por todos os indivíduos infectados observados. Eles aparecerão na saída do vetor <code>&lt;integer&gt;</code> com <code>0</code> casos secundários.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Conta casos secundários por indivíduo em contatos e linelist</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>all_secondary_cases <span class="ot">&lt;-</span> epicontacts<span class="sc">::</span><span class="fu">get_degree</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> epi_contacts,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">"out"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">only_linelist =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled" title="Atenção">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Aviso</span>Atenção
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Em <code>epicontacts::get_degree()</code> usamos o argumento <code>only_linelist = TRUE</code>. Isso serve para contar o número de casos secundários causados por todos os indivíduos infectados observados, o que inclui indivíduos nos data frames de contatos e linelist.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<section id="quando-usar-only_linelist-false" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="quando-usar-only_linelist-false">Quando usar ‘only_linelist = FALSE’?</h3>
+<p>A premissa de que “o linelist incluirá todos os indivíduos nos contatos e no linelist” pode não funcionar para todas as situações.</p>
+<p>Por exemplo, se durante o registro das infecções observadas, os dados de contatos incluírem mais indivíduos do que os disponíveis nos dados de linelist, então você precisa considerar apenas os indivíduos dos dados de contatos. Nessa situação, em <code>epicontacts::get_degree()</code> usamos o argumento <code>only_linelist = FALSE</code>.</p>
+<p>Veja aqui um <a href="https://reprex.tidyverse.org/">exemplo reproduzível</a> impresso:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Três indivíduos no linelist</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>sample_linelist <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="fu">c</span>(<span class="st">"id1"</span>, <span class="st">"id2"</span>, <span class="st">"id3"</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Quatro pares infector-infectado com cinco indivíduos nos dados de contatos</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sample_contact <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">from =</span> <span class="fu">c</span>(<span class="st">"id1"</span>,<span class="st">"id1"</span>,<span class="st">"id2"</span>,<span class="st">"id4"</span>),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">to =</span> <span class="fu">c</span>(<span class="st">"id2"</span>,<span class="st">"id3"</span>,<span class="st">"id4"</span>,<span class="st">"id5"</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># cria um objeto epicontacts</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>sample_net <span class="ot">&lt;-</span> epicontacts<span class="sc">::</span><span class="fu">make_epicontacts</span>(</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">linelist =</span> sample_linelist,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">contacts =</span> sample_contact,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">directed =</span> <span class="cn">TRUE</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co"># conta casos secundários por indivíduo apenas a partir do linelist</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>epicontacts<span class="sc">::</span><span class="fu">get_degree</span>(<span class="at">x =</span> sample_net, <span class="at">type =</span> <span class="st">"out"</span>, <span class="at">only_linelist =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; id1 id2 id3 </span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   2   1   0</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="co"># conta casos secundários por indivíduo apenas a partir dos contatos</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>epicontacts<span class="sc">::</span><span class="fu">get_degree</span>(<span class="at">x =</span> sample_net, <span class="at">type =</span> <span class="st">"out"</span>, <span class="at">only_linelist =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; id1 id2 id4 id3 id5 </span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   2   1   1   0   0</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+</div>
+<p>A partir de um histograma do objeto <code>all_secondary_cases</code>, podemos identificar a <strong>variação em nível individual</strong> no número de casos secundários. Três casos estiveram relacionados a mais de 20 casos secundários, enquanto os demais casos tiveram menos de cinco ou zero casos secundários.</p>
+<!-- Visualizing the number of secondary cases on a histogram will help us to relate this with the statistical distribution to fit: -->
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="do">## plota a distribuição</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>all_secondary_cases <span class="sc">%&gt;%</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">enframe</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(value)) <span class="sc">+</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Number of secondary cases"</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Frequency"</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="06-superspreading-estimar_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>O número de casos secundários pode ser usado para estimar <em>empiricamente</em> a <strong>distribuição de casos secundários</strong>, que é o número de <em>infecções</em> secundárias causadas por cada caso. Uma candidata a distribuição estatística usada para modelar a distribuição de casos secundários é a distribuição <strong>binomial negativa</strong> com dois parâmetros:</p>
+<ul>
+<li><p><strong>Média</strong>, que representa o <span class="math inline">\(R_{0}\)</span>, o número médio de casos (secundários) produzidos por um único indivíduo em uma população inteiramente suscetível, e</p></li>
+<li><p><strong>Dispersão</strong>, expressa como <span class="math inline">\(k\)</span>, que representa a variação na transmissão em nível individual por indivíduos únicos.</p></li>
+</ul>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="06-superspreading-estimar_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>A partir do histograma e do gráfico de densidade, podemos identificar que a distribuição de casos secundários é fortemente assimétrica ou <strong>sobredispersa</strong> (<em>overdispersed</em>). Nesse referencial, os eventos de superdisseminação (SSEs) não são arbitrários ou excepcionais, mas simplesmente realizações da cauda direita da distribuição de casos secundários, que podemos quantificar e analisar (<a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Recapitulação da terminologia
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>A partir dos dados de linelist e de rastreamento de contatos, calculamos o <strong>número de casos secundários</strong> causados pelos indivíduos infectados observados.</li>
+<li>Enquanto o <span class="math inline">\(R_{0}\)</span> captura a transmissão média na população, o <strong>número de reprodução individual</strong> é a variável aleatória que representa o número de <em>infecções</em> secundárias causadas por um indivíduo <em>infectado</em> específico nessa população.</li>
+<li>Devido a efeitos estocásticos na transmissão, o número de <em>infecções</em> secundárias causadas por cada infecção é descrito estatisticamente pela <strong>distribuição de casos secundários</strong>.</li>
+<li>A distribuição de casos secundários <em>empírica</em> pode ser modelada usando uma distribuição <strong>binomial negativa</strong> com média <span class="math inline">\(R_{0}\)</span> e parâmetro de dispersão <span class="math inline">\(k\)</span>, estimados a partir do número observado de casos secundários.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<section id="poisson-sobredispersão-e-binomial-negativa" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="poisson-sobredispersão-e-binomial-negativa">Poisson, sobredispersão e binomial negativa</h3>
+<!-- distribution stories -->
+<p>Para a ocorrência de eventos discretos associados, podemos usar distribuições discretas de <strong>Poisson</strong> ou binomial negativa.</p>
+<p>Em uma distribuição de Poisson, a média é igual à variância. Mas quando a variância é maior que a média, isso é chamado de <strong>sobredispersão</strong> (<em>overdispersion</em>). Em aplicações biológicas, a sobredispersão ocorre e, por isso, uma binomial negativa pode valer a pena ser considerada como uma alternativa à distribuição de Poisson.</p>
+<p>A distribuição <strong>binomial negativa</strong> é especialmente útil para dados discretos em uma faixa positiva ilimitada cuja variância amostral excede a média amostral. Nesses termos, as observações são sobredispersas em relação a uma distribuição de Poisson, para a qual a média é igual à variância.</p>
+<p>Na epidemiologia, a <a href="https://en.wikipedia.org/wiki/Negative_binomial_distribution">distribuição binomial negativa</a> tem sido usada para modelar a transmissão de doenças infecciosas em que o número provável de infecções subsequentes pode variar consideravelmente de indivíduo para indivíduo e de ambiente para ambiente, capturando toda a variação nos históricos infecciosos dos indivíduos, incluindo propriedades biológicas (ou seja, grau de excreção viral) e circunstâncias ambientais (por exemplo, tipo e local de contato).</p>
+</section>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Calcule a distribuição de casos secundários para o ebola usando o objeto <code>ebola_sim_clean</code> do pacote <code>{outbreaks}</code>.</p>
+<ul>
+<li>A distribuição de casos secundários do ebola é assimétrica ou sobredispersa?</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-12" class="callout-12-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>⚠️ <strong>Passo opcional:</strong> Este conjunto de dados tem 5829 casos. Executar <code>plot(&lt;epicontacts&gt;)</code> pode levar vários minutos e consumir memória significativa para grandes surtos como o linelist de ebola. Se você estiver em um computador mais antigo ou mais lento, pode pular este passo.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="do">## primeiro, cria um objeto epicontacts</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>ebola_contacts <span class="ot">&lt;-</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  epicontacts<span class="sc">::</span><span class="fu">make_epicontacts</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">linelist =</span> outbreaks<span class="sc">::</span>ebola_sim_clean<span class="sc">$</span>linelist,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">contacts =</span> outbreaks<span class="sc">::</span>ebola_sim_clean<span class="sc">$</span>contacts,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">directed =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># conta casos secundários por indivíduo em contatos e linelist</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>ebola_secondary <span class="ot">&lt;-</span> epicontacts<span class="sc">::</span><span class="fu">get_degree</span>(</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> ebola_contacts,</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">"out"</span>,</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">only_linelist =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="do">## plota a distribuição</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>ebola_secondary <span class="sc">%&gt;%</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">enframe</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(value)) <span class="sc">+</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Number of secondary cases"</span>,</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Frequency"</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="06-superspreading-estimar_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>A partir de uma inspeção visual, a distribuição de casos secundários para o conjunto de dados de ebola em <code>ebola_sim_clean</code> mostra uma distribuição assimétrica com casos secundários iguais ou inferiores a 6. Precisamos complementar essa observação com uma análise estatística para avaliar a sobredispersão.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="estimar-o-parâmetro-de-dispersão" class="level2">
+<h2 class="anchored" data-anchor-id="estimar-o-parâmetro-de-dispersão">Estimar o parâmetro de dispersão</h2>
+<p>Para estimar empiricamente o parâmetro de dispersão <span class="math inline">\(k\)</span>, podemos ajustar uma distribuição binomial negativa ao número de casos secundários.</p>
+<p>Podemos ajustar distribuições aos dados usando o pacote <code>{fitdistrplus}</code>, que fornece estimativas de máxima verossimilhança.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="do">## ajusta a distribuição</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>offspring_fit <span class="ot">&lt;-</span> all_secondary_cases <span class="sc">%&gt;%</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  fitdistrplus<span class="sc">::</span><span class="fu">fitdist</span>(<span class="at">distr =</span> <span class="st">"nbinom"</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>offspring_fit</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Fitting of the distribution ' nbinom ' by maximum likelihood 
+Parameters:
+       estimate  Std. Error
+size 0.02039807 0.007278299
+mu   0.60452947 0.337893199</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Nome dos parâmetros
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A partir da saída do <code>{fitdistrplus}</code>:</p>
+<ul>
+<li>O objeto <code>size</code> refere-se ao parâmetro de dispersão estimado <span class="math inline">\(k\)</span>, e</li>
+<li>O objeto <code>mu</code> refere-se à média estimada, que representa o <span class="math inline">\(R_{0}\)</span>,</li>
+</ul>
+</div>
+</div>
+<p>A partir da distribuição do número de casos secundários, estimamos um parâmetro de dispersão <span class="math inline">\(k\)</span> de 0.02, com um intervalo de confiança de 95% de 0.006 a 0.035. Como o valor de <span class="math inline">\(k\)</span> é significativamente menor que um, podemos concluir que há um potencial considerável para eventos de superdisseminação.</p>
+<p>Podemos sobrepor os valores de densidade estimados da distribuição binomial negativa ajustada e o histograma do número de casos secundários:</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="06-superspreading-estimar_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Variação na transmissão em nível individual
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A variação na transmissão em nível individual é definida pela relação entre a média (<span class="math inline">\(R_{0}\)</span>) e a dispersão (<span class="math inline">\(k\)</span>), que juntas definem a variância de uma distribuição binomial negativa.</p>
+<p>O modelo binomial negativo tem <span class="math inline">\(variance = R_{0}(1+\frac{R_{0}}{k})\)</span>, portanto valores menores de <span class="math inline">\(k\)</span> indicam maior variância e, consequentemente, maior <strong>variação em nível individual</strong> na transmissão.</p>
+<p><span class="math display">\[\uparrow variance = R_{0}(1+\frac{R_{0}}{\downarrow k})\]</span></p>
+<p>Quando <span class="math inline">\(k\)</span> se aproxima do infinito (<span class="math inline">\(k \rightarrow \infty\)</span>), a variância se iguala à média (porque <span class="math inline">\(\frac{R_{0}}{\infty}=0\)</span>). Isso torna o modelo convencional de Poisson um caso especial do modelo binomial negativo.</p>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A partir do desafio anterior, use a distribuição de casos secundários do objeto <code>ebola_sim_clean</code> do pacote <code>{outbreaks}</code>.</p>
+<p>Ajuste uma distribuição binomial negativa para estimar a média e o parâmetro de dispersão da distribuição de casos secundários. Tente estimar a incerteza do parâmetro de dispersão a partir do erro padrão para intervalos de confiança de 95%.</p>
+<ul>
+<li>O parâmetro de dispersão estimado para o ebola fornece evidências de uma variação na transmissão em nível individual?</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Revise como ajustamos uma distribuição binomial negativa usando a função <code>fitdistrplus::fitdist()</code>.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-18-contents" aria-controls="callout-18" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-18" class="callout-18-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>ebola_offspring <span class="ot">&lt;-</span> ebola_secondary <span class="sc">%&gt;%</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  fitdistrplus<span class="sc">::</span><span class="fu">fitdist</span>(<span class="at">distr =</span> <span class="st">"nbinom"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>ebola_offspring</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Fitting of the distribution ' nbinom ' by maximum likelihood 
+Parameters:
+      estimate  Std. Error
+size 0.8539443 0.072505326
+mu   0.3675993 0.009497097</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="do">## extrai o parâmetro "size"</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>ebola_mid <span class="ot">&lt;-</span> ebola_offspring<span class="sc">$</span>estimate[[<span class="st">"size"</span>]]</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="do">## calcula os intervalos de confiança de 95% usando a</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="do">## estimativa do erro padrão e</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="do">## os quantis 0.025 e 0.975 da distribuição normal.</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>ebola_lower <span class="ot">&lt;-</span> ebola_mid <span class="sc">+</span> ebola_offspring<span class="sc">$</span>sd[[<span class="st">"size"</span>]] <span class="sc">*</span> <span class="fu">qnorm</span>(<span class="fl">0.025</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>ebola_upper <span class="ot">&lt;-</span> ebola_mid <span class="sc">+</span> ebola_offspring<span class="sc">$</span>sd[[<span class="st">"size"</span>]] <span class="sc">*</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ebola_mid</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co"># ebola_lower</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co"># ebola_upper</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A partir da distribuição do número de casos secundários, estimamos um parâmetro de dispersão <span class="math inline">\(k\)</span> de 0.85, com um intervalo de confiança de 95% de 0.71 a 1.</p>
+<p>Para estimativas do parâmetro de dispersão maiores que um, obtemos baixa variância na distribuição e, portanto, baixa variação na transmissão em nível individual.</p>
+<p>Mas isso significa que a distribuição de casos secundários não tem eventos de superdisseminação (SSEs)? Mais adiante você encontrará um desafio adicional: Como definir um limiar de SSE para o ebola?</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-19-contents" aria-controls="callout-19" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-19" class="callout-19-contents callout-collapse collapse">
+<section id="selecionar-o-melhor-modelo" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="selecionar-o-melhor-modelo">Selecionar o melhor modelo</h3>
+<p>Podemos usar as estimativas de máxima verossimilhança do <code>{fitdistrplus}</code> para comparar diferentes modelos e avaliar o desempenho do ajuste usando estimadores como o AIC e o BIC. Leia mais na vinheta sobre <a href="https://epiverse-trace.github.io/superspreading/articles/estimate_individual_level_transmission.html">Estimar a transmissão em nível individual</a> e use a função auxiliar <code>ic_tbl()</code> do <code>{superspreading}</code> para isso!</p>
+</section>
+</div>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="o-parâmetro-de-dispersão-entre-diferentes-doenças" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-parâmetro-de-dispersão-entre-diferentes-doenças">O parâmetro de dispersão entre diferentes doenças</h3>
+<p>Pesquisas sobre infecções sexualmente transmissíveis e doenças transmitidas por vetores sugeriram anteriormente uma regra ‘20/80’, com 20% dos indivíduos contribuindo com pelo menos 80% do potencial de transmissão (<a href="https://www.pnas.org/doi/10.1073/pnas.94.1.338">Woolhouse et al., 1997</a>).</p>
+<p>Por si só, o parâmetro de dispersão <span class="math inline">\(k\)</span> é difícil de interpretar intuitivamente e, portanto, convertê-lo em um resumo proporcional pode facilitar a comparação. Quando consideramos uma gama mais ampla de patógenos, podemos ver que não há uma regra rígida para a porcentagem que gera 80% da transmissão, mas a variação surge como uma característica comum das doenças infecciosas:</p>
+<ul>
+<li><p>Quando os 20% de casos mais infecciosos contribuem com 80% da transmissão (ou mais), há uma alta variação na transmissão em nível individual, com uma distribuição de casos secundários fortemente sobredispersa (<span class="math inline">\(k&lt;0.1\)</span>), por exemplo, SARS-1.</p></li>
+<li><p>Quando os 20% de casos mais infecciosos contribuem com ~50% da transmissão, há uma baixa variação na transmissão em nível individual, com uma distribuição de casos secundários moderadamente dispersa (<span class="math inline">\(k &gt; 0.1\)</span>), por exemplo, peste pneumônica.</p></li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/SEE-individual-reproductive-number-fig-c-d.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Evidências de variação no número de reprodução individual</strong>. (Esquerda, c) Proporção de transmissão esperada dos 20% de casos mais infecciosos, para 10 conjuntos de dados de surtos ou vigilância (triângulos). As linhas tracejadas mostram as proporções esperadas sob a regra 20/80 (superior) e homogeneidade (inferior). (Direita, d), Eventos de superdisseminação notificados (SSEs; losangos) em relação ao número de reprodução estimado R (quadrados) para doze infecções de transmissão direta. As cruzes mostram o percentil 99 proposto como limiar para SSEs. (Mais detalhes da figura em <a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>)</figcaption>
+</figure>
+</div>
+</section>
+</div>
+</section>
+<section id="controlar-o-superspreading-com-o-rastreamento-de-contatos" class="level2">
+<h2 class="anchored" data-anchor-id="controlar-o-superspreading-com-o-rastreamento-de-contatos">Controlar o superspreading com o rastreamento de contatos</h2>
+<p>Durante um surto, é comum tentar reduzir a transmissão identificando pessoas que entraram em contato com uma pessoa infectada e, em seguida, colocá-las em quarentena caso venham a se infectar. Esse rastreamento de contatos pode ser implementado de várias maneiras. O rastreamento de contatos ‘prospectivo’ (<em>forward</em>) tem como alvo os contatos a jusante que possam ter sido infectados por uma infecção recém-identificada (ou seja, o ‘caso índice’). Já o rastreamento ‘retrospectivo’ (<em>backward</em>) rastreia a montante o caso primário que infectou o caso índice (ou um local ou evento no qual o caso índice foi infectado), por exemplo, refazendo o histórico de contatos até o provável ponto de exposição. Isso torna possível identificar outros que também foram potencialmente infectados por esse caso primário anterior.</p>
+<p>Na presença de variação na transmissão em nível individual, isto é, com uma distribuição de casos secundários sobredispersa, se esse caso primário for identificado, uma fração maior da cadeia de transmissão poderá ser detectada ao realizar o rastreamento prospectivo de cada um dos contatos desse caso primário (<a href="https://wellcomeopenresearch.org/articles/5-239/v3">Endo et al., 2020</a>).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/contact-tracing-strategies.png" class="img-fluid figure-img"></p>
+<figcaption>Representação esquemática das estratégias de rastreamento de contatos. As setas pretas indicam as direções de transmissão; as setas azuis e laranjas, um rastreamento de contatos bem-sucedido ou com falha, respectivamente. Quando há evidência de variação na transmissão em nível individual, frequentemente resultando em superspreading, o rastreamento de contatos retrospectivo a partir do caso índice (círculo azul) aumenta a probabilidade de encontrar o caso primário (círculo verde) ou aglomerados com uma fração maior de casos, aumentando potencialmente o número de casos em quarentena (círculos amarelos). <a href="https://www.paho.org/sites/default/files/backward_contact_tracing_v3_0.pdf">Claire Blackmore, 2021</a></figcaption>
+</figure>
+</div>
+<p>Quando há evidências de variação em nível individual (ou seja, sobredispersão), muitas vezes resultando nos chamados eventos de superdisseminação, uma grande proporção das infecções pode estar vinculada a uma pequena proporção dos aglomerados originais. Como resultado, encontrar e direcionar intervenções aos aglomerados originários, em combinação com a redução de infecções subsequentes, pode aumentar substancialmente a eficácia dos métodos de rastreamento (<a href="https://wellcomeopenresearch.org/articles/5-239/v3">Endo et al., 2020</a>).</p>
+<p>Evidências empíricas com foco na avaliação da eficiência do rastreamento retrospectivo levaram à identificação de 42% mais casos do que o rastreamento prospectivo, apoiando sua implementação quando uma supressão rigorosa da transmissão é justificada (<a href="https://www.nature.com/articles/s41467-022-32531-6">Raymenants et al., 2022</a>).</p>
+</section>
+<section id="probabilidade-de-casos-em-um-determinado-aglomerado" class="level2">
+<h2 class="anchored" data-anchor-id="probabilidade-de-casos-em-um-determinado-aglomerado">Probabilidade de casos em um determinado aglomerado</h2>
+<p>Usando o <code>{superspreading}</code>, podemos estimar a probabilidade de ter um aglomerado de infecções secundárias causadas por um caso primário identificado por rastreamento retrospectivo de tamanho <span class="math inline">\(X\)</span> ou maior (<a href="https://wellcomeopenresearch.org/articles/5-239/v3">Endo et al., 2020</a>).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a semente para o gerador de números aleatórios</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># estima a probabilidade de</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ter um aglomerado de tamanho 5, 10 ou 25</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co"># casos secundários a partir de um caso primário,</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co"># dados o número de reprodução e o</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="co"># parâmetro de dispersão conhecidos.</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>superspreading<span class="sc">::</span><span class="fu">proportion_cluster_size</span>(</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> offspring_fit<span class="sc">$</span>estimate[<span class="st">"mu"</span>],</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">k =</span> offspring_fit<span class="sc">$</span>estimate[<span class="st">"size"</span>],</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">cluster_size =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R          k prop_5 prop_10 prop_25
+1 0.6045295 0.02039807  87.9%   74.6%   46.1%</code></pre>
+</div>
+</div>
+<p>Mesmo tendo um <span class="math inline">\(R&lt;1\)</span>, uma distribuição de casos secundários fortemente sobredispersa (<span class="math inline">\(k=0.02\)</span>) significa que, se detectarmos um novo caso, há uma probabilidade de 46.1% de que ele tenha se originado de um aglomerado de 25 infecções ou mais. Portanto, ao seguir uma estratégia retrospectiva, os esforços de rastreamento de contatos aumentarão a probabilidade de conter e colocar em quarentena com sucesso esse grande número de indivíduos infectados anteriormente, em vez de simplesmente focar no novo caso, que provavelmente não infectou ninguém (porque <span class="math inline">\(k\)</span> é muito pequeno).</p>
+<p>Também podemos usar esse número para restringir aglomerações a partir de um determinado tamanho para reduzir a epidemia, prevenindo potenciais eventos de superdisseminação. As intervenções podem ter como meta reduzir o número de reprodução a fim de diminuir a probabilidade de ter aglomerados de casos secundários.</p>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="rastreamento-retrospectivo-de-contatos-para-o-ebola" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="rastreamento-retrospectivo-de-contatos-para-o-ebola">Rastreamento retrospectivo de contatos para o ebola</h3>
+<p>Use os parâmetros estimados para o ebola do objeto <code>ebola_sim_clean</code> do pacote <code>{outbreaks}</code>.</p>
+<p>Calcule a probabilidade de ter um aglomerado de infecções secundárias causadas por um caso primário identificado por rastreamento retrospectivo de tamanho 5, 10, 15 ou maior. A implementação de uma estratégia retrospectiva neste estágio do surto de ebola aumentaria a probabilidade de conter e colocar em quarentena mais casos subsequentes?</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-22-contents" aria-controls="callout-22" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-22" class="callout-22-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Revise como estimamos a probabilidade de ter aglomerados de tamanho fixo, dados a média e os parâmetros de dispersão da distribuição de casos secundários, usando a função <code>superspreading::proportion_cluster_size()</code>.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-24-contents" aria-controls="callout-24" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-24" class="callout-24-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estima a probabilidade de</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ter um aglomerado de tamanho 5, 10 ou 25</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># casos secundários a partir de um caso primário,</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># dados o número de reprodução e o</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co"># parâmetro de dispersão conhecidos.</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>superspreading<span class="sc">::</span><span class="fu">proportion_cluster_size</span>(</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> ebola_offspring<span class="sc">$</span>estimate[<span class="st">"mu"</span>],</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">k =</span> ebola_offspring<span class="sc">$</span>estimate[<span class="st">"size"</span>],</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">cluster_size =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R         k prop_5 prop_10 prop_25
+1 0.3675993 0.8539443  2.64%      0%      0%</code></pre>
+</div>
+</div>
+<p>A probabilidade de ter aglomerados de cinco pessoas é de 1,8%. Neste estágio, dados os parâmetros dessa distribuição de casos secundários, uma estratégia retrospectiva pode não aumentar a probabilidade de conter e colocar em quarentena mais casos subsequentes.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="desafios" class="level2">
+<h2 class="anchored" data-anchor-id="desafios">Desafios</h2>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="o-ebola-tem-algum-evento-de-superdisseminação" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-ebola-tem-algum-evento-de-superdisseminação">O ebola tem algum evento de superdisseminação?</h3>
+<p>‘Eventos de superdisseminação’ podem significar coisas diferentes para pessoas diferentes, por isso <a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a> propuseram um protocolo geral para definir um evento de superdisseminação (SSE). Se o número de infecções secundárias causadas por cada caso, <span class="math inline">\(Z\)</span>, segue uma distribuição binomial negativa (<span class="math inline">\(R, k\)</span>):</p>
+<ul>
+<li>Definimos um SSE como qualquer indivíduo infectado que infecta mais do que <span class="math inline">\(Z(n)\)</span> outras pessoas, onde <span class="math inline">\(Z(n)\)</span> é o n-ésimo percentil da distribuição <span class="math inline">\(Poisson(R)\)</span>.</li>
+<li>Um SSE do percentil 99 é, portanto, qualquer caso que causa mais infecções do que ocorreria em 99% dos históricos infecciosos em uma população homogênea.</li>
+</ul>
+<p>Usando a função de distribuição correspondente, estime o limiar de SSE para definir um SSE para as estimativas da distribuição de casos secundários do ebola para o objeto <code>ebola_sim_clean</code> do pacote <code>{outbreaks}</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-25-contents" aria-controls="callout-25" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-25" class="callout-25-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Em uma distribuição de Poisson, o parâmetro <strong>lambda</strong> ou <strong>taxa</strong> (<em>rate</em>) é igual à <strong>média</strong> estimada de uma distribuição binomial negativa. Você pode explorar isso no aplicativo Shiny <a href="https://ben18785.shinyapps.io/distribution-zoo/">The distribution zoo</a>.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-26-contents" aria-controls="callout-26" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-26" class="callout-26-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Para obter o valor do quantil para o percentil 99, precisamos usar a <a href="https://sakai.unc.edu/access/content/group/3d1eb92e-7848-4f55-90c3-7c72a54e7e43/public/docs/lectures/lecture13.htm#probfunc">função de densidade</a> para a distribuição de Poisson <code>dpois()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obtém a média</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>ebola_mu_mid <span class="ot">&lt;-</span> ebola_offspring<span class="sc">$</span>estimate[<span class="st">"mu"</span>]</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co"># obtém o percentil 99 da distribuição de poisson</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co"># com média igual a mu</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>stats<span class="sc">::</span><span class="fu">qpois</span>(</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">p =</span> <span class="fl">0.99</span>,</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">lambda =</span> ebola_mu_mid</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2</code></pre>
+</div>
+</div>
+<p>Compare esses valores com os relatados por <a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>. Veja a figura abaixo:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/SEE-individual-reproductive-number-fig-d.png" class="img-fluid figure-img"></p>
+<figcaption>Eventos de superdisseminação notificados (SSEs; losangos) em relação ao número de reprodução estimado R (quadrados) para doze infecções de transmissão direta. As linhas mostram o intervalo de percentil 5–95 do número de casos secundários seguindo uma distribuição de Poisson com lambda igual ao número de reprodução (<span class="math inline">\(Z∼Poisson(R)\)</span>), e as cruzes mostram o percentil 99 proposto como limiar para SSEs. As estrelas representam SSEs causados por mais de um caso fonte. As ‘outras’ doenças são: 1, Streptococcus do grupo A; 2, febre de Lassa; 3, Mycoplasma pneumoniae; 4, peste pneumônica; 5, tuberculose. O R não é mostrado para ‘outras’ doenças e está fora de escala para monkeypox.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="proporção-esperada-de-transmissão" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="proporção-esperada-de-transmissão">Proporção esperada de transmissão</h3>
+<p>Qual é a proporção de casos responsável por 80% da transmissão?</p>
+<p>Use o <code>{superspreading}</code> e compare as estimativas para <strong>MERS</strong>, usando os parâmetros da distribuição de casos secundários deste episódio do tutorial, com os parâmetros da distribuição de casos secundários de <strong>SARS-1</strong> e <strong>ebola</strong> acessíveis por meio do pacote R <code>{epiparameter}</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Para usar <code>superspreading::proportion_transmission()</code>, recomendamos ler o manual de referência <a href="https://epiverse-trace.github.io/superspreading/reference/proportion_transmission.html">Estimar qual proporção de casos causa uma certa proporção de transmissão</a> (<em>Estimate what proportion of cases cause a certain proportion of transmission</em>).</p>
+<p>Atualmente, o <code>{epiparameter}</code> possui distribuições de casos secundários para SARS, Smallpox, Mpox, Pneumonic Plague, Hantavirus Pulmonary Syndrome, Ebola Virus Disease. Vamos acessar os parâmetros de <code>mean</code> (média) e <code>dispersion</code> (dispersão) da distribuição de casos secundários para SARS-1:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Carrega os parâmetros</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>sars <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"SARS"</span>,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"offspring distribution"</span>,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>sars_params <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">get_parameters</span>(sars)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>sars_params</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      mean dispersion 
+      1.63       0.16 </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-29" class="callout-29-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' estimativa para ebola --------------</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>ebola_epiparameter <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"Ebola"</span>,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"offspring distribution"</span>,</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>ebola_params <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">get_parameters</span>(ebola_epiparameter)</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>ebola_params</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      mean dispersion 
+       1.5        5.1 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estima a</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="co"># proporção de casos que</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="co"># geram 80% da transmissão</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>superspreading<span class="sc">::</span><span class="fu">proportion_transmission</span>(</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> ebola_params[[<span class="st">"mean"</span>]],</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">k =</span> ebola_params[[<span class="st">"dispersion"</span>]],</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">prop_transmission =</span> <span class="fl">0.8</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    R   k prop_80
+1 1.5 5.1   43.2%</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' estimativa para sars --------------</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="co"># estima a</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co"># proporção de casos que</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="co"># geram 80% da transmissão</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>superspreading<span class="sc">::</span><span class="fu">proportion_transmission</span>(</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> sars_params[[<span class="st">"mean"</span>]],</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">k =</span> sars_params[[<span class="st">"dispersion"</span>]],</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">prop_transmission =</span> <span class="fl">0.8</span></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     R    k prop_80
+1 1.63 0.16     13%</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' estimativa para mers --------------</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="co"># estima a</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="co"># proporção de casos que</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="co"># geram 80% da transmissão</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>superspreading<span class="sc">::</span><span class="fu">proportion_transmission</span>(</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> offspring_fit<span class="sc">$</span>estimate[<span class="st">"mu"</span>],</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">k =</span> offspring_fit<span class="sc">$</span>estimate[<span class="st">"size"</span>],</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">prop_transmission =</span> <span class="fl">0.8</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R          k prop_80
+1 0.6045295 0.02039807   2.13%</code></pre>
+</div>
+</div>
+<p>A MERS tem o menor percentual de casos (2,1%) responsável por 80% da transmissão, representativo de distribuições de casos secundários fortemente sobredispersas.</p>
+<p>O ebola tem o maior percentual de casos (43%) responsável por 80% da transmissão. Isso é representativo de distribuições de casos secundários com altos parâmetros de dispersão.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dispersão inversa?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>O parâmetro de dispersão <span class="math inline">\(k\)</span> pode ser expresso de maneiras diferentes na literatura.</p>
+<ul>
+<li>Na página da Wikipédia sobre a binomial negativa, esse parâmetro é definido em sua forma recíproca (consulte a <a href="https://en.wikipedia.org/wiki/Negative_binomial_distribution">equação de variância</a>).</li>
+<li>No aplicativo Shiny <a href="https://ben18785.shinyapps.io/distribution-zoo/">The distribution zoo</a>, o parâmetro de dispersão <span class="math inline">\(k\)</span> é denominado “Inverse-dispersion”, mas é igual ao parâmetro estimado neste episódio. Convidamos você a explorar isso!</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Heterogeneidade?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A variação na transmissão em nível individual também é chamada de heterogeneidade na transmissão ou grau de heterogeneidade em <a href="https://wellcomeopenresearch.org/articles/5-83">Lloyd-Smith et al., 2005</a>, e infecciosidade heterogênea em <a href="https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-018-2330-z">Campbell et al., 2018</a> ao introduzir o pacote <code>{outbreaker2}</code>. Da mesma forma, uma rede de contatos pode armazenar contatos epidemiológicos heterogêneos, como na documentação do pacote <code>{epicontacts}</code> (<a href="https://www.repidemicsconsortium.org/epicontacts/articles/epicontacts.html">Nagraj et al., 2018</a>).</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Para se aprofundar">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Para se aprofundar
+</div>
+</div>
+<section id="leia-estas-postagens-de-blog" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="leia-estas-postagens-de-blog">Leia estas postagens de blog</h3>
+<p>O artigo <a href="https://plus.maths.org/content/monkeypox">Tracing monkeypox</a>, do consórcio <a href="https://maths.org/juniper/">JUNIPER</a>, demonstra a utilidade dos modelos de rede no rastreamento de contatos.</p>
+<p>A postagem <a href="https://kucharski.substack.com/p/going-viral">Going viral</a>, de Adam Kucharski, compartilha reflexões sobre viralização no YouTube, surtos de doenças e campanhas de marketing sobre as condições que desencadeiam o contágio online.</p>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Pontos-chave">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Pontos-chave
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Use o <code>{epicontacts}</code> para calcular o número de casos secundários causados por um indivíduo específico a partir de dados de linelist e contatos.</li>
+<li>Use o <code>{fitdistrplus}</code> para estimar empiricamente a distribuição de casos secundários a partir da distribuição do número de casos secundários.</li>
+<li>Use o <code>{superspreading}</code> para estimar a probabilidade de ter aglomerados de um determinado tamanho a partir de casos primários e orientar os esforços de rastreamento de contatos.</li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../episodios/05-severidade-estatica.html" class="pagination-link" aria-label="Estimativa da gravidade de um surto">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Estimativa da gravidade de um surto</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../episodios/07-superspreading-simular.html" class="pagination-link" aria-label="Simular cadeias de transmissão">
+        <span class="nav-page-text"><span class="chapter-title">Simular cadeias de transmissão</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/06-superspreading-estimar.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

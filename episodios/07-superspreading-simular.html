@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Simular cadeias de transmissão – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../notas/equacao-de-renovacao.html" rel="next">
+<link href="../episodios/06-superspreading-estimar.html" rel="prev">
+<link href="../img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../episodios/07-superspreading-simular.html"><span class="chapter-title">Simular cadeias de transmissão</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#introdução" id="toc-introdução" class="nav-link active" data-scroll-target="#introdução">Introdução</a></li>
+  <li><a href="#simulação-de-surtos-não-controlados" id="toc-simulação-de-surtos-não-controlados" class="nav-link" data-scroll-target="#simulação-de-surtos-não-controlados">Simulação de surtos não controlados</a></li>
+  <li><a href="#obter-a-distribuição-de-casos-secundários" id="toc-obter-a-distribuição-de-casos-secundários" class="nav-link" data-scroll-target="#obter-a-distribuição-de-casos-secundários">Obter a distribuição de casos secundários</a></li>
+  <li><a href="#obter-o-tempo-de-geração" id="toc-obter-o-tempo-de-geração" class="nav-link" data-scroll-target="#obter-o-tempo-de-geração">Obter o tempo de geração</a></li>
+  <li><a href="#simular-uma-única-cadeia" id="toc-simular-uma-única-cadeia" class="nav-link" data-scroll-target="#simular-uma-única-cadeia">Simular uma única cadeia</a></li>
+  <li><a href="#simular-múltiplas-cadeias" id="toc-simular-múltiplas-cadeias" class="nav-link" data-scroll-target="#simular-múltiplas-cadeias">Simular múltiplas cadeias</a></li>
+  <li><a href="#iterar-simulações" id="toc-iterar-simulações" class="nav-link" data-scroll-target="#iterar-simulações">Iterar simulações</a></li>
+  <li><a href="#visualizar-múltiplas-cadeias" id="toc-visualizar-múltiplas-cadeias" class="nav-link" data-scroll-target="#visualizar-múltiplas-cadeias">Visualizar múltiplas cadeias</a></li>
+  <li><a href="#desafios" id="toc-desafios" class="nav-link" data-scroll-target="#desafios">Desafios</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/07-superspreading-simular.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Simular cadeias de transmissão</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled" title="Perguntas">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Perguntas
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Como podemos simular cadeias de transmissão com base nas características da infecção?</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Objetivos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Objetivos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Estimar o potencial de grandes surtos após a introdução de um novo caso usando processos de ramificação com o <code>{epichains}</code>.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<section id="pré-requisitos" class="level2 callout-body-container callout-body">
+<h2 class="anchored" data-anchor-id="pré-requisitos">Pré-requisitos</h2>
+<p>É recomendável se familiarizar com as seguintes dependências conceituais antes de realizar este tutorial:</p>
+<p><strong>Estatística</strong>: Distribuições de probabilidade comuns, incluindo Poisson e binomial negativa.</p>
+<p><strong>Teoria de epidemias</strong>: O número de reprodução, <span class="math inline">\(R\)</span>.</p>
+<p><strong>Pacotes de R instalados</strong>: <code>{epichains}</code>, <code>{epiparameter}</code>, <code>{tidyverse}</code>.</p>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Instale os pacotes se eles ainda não estiverem instalados (você pode configurar o espelho brasileiro do CRAN com <code>options(repos = c(CRAN = "https://cran-r.c3sl.ufpr.br/"))</code>):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>base<span class="sc">::</span><span class="fu">require</span>(<span class="st">"pak"</span>)) <span class="fu">install.packages</span>(<span class="st">"pak"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">"epichains"</span>, <span class="st">"epiparameter"</span>, <span class="st">"tidyverse"</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Se você encontrar alguma mensagem de erro, acesse a <a href="../setup.html#software-setup">página principal de configuração</a>.</p>
+</div>
+</div>
+</div>
+<section id="introdução" class="level2">
+<h2 class="anchored" data-anchor-id="introdução">Introdução</h2>
+<!-- what we know -->
+<p>A variação individual na transmissão pode afetar tanto o potencial de uma epidemia se estabelecer em uma população quanto a facilidade de controle (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al., 2017</a>).</p>
+<ul>
+<li><p>Uma maior variação reduz a probabilidade geral de um único novo caso causar um grande surto local, porque a maioria dos casos infecta poucos outros e indivíduos que geram um grande número de casos secundários são relativamente raros.</p></li>
+<li><p>No entanto, se um “evento de superdisseminação” de fato ocorrer e o surto se estabelecer, essa variação pode tornar o surto mais difícil de controlar por meio de <em>intervenções em massa</em> (ou seja, intervenções generalizadas que assumem implicitamente que todos contribuem igualmente para a transmissão), porque alguns casos contribuem desproporcionalmente: um único caso não controlado pode gerar um grande número de casos secundários.</p></li>
+<li><p>Por outro lado, a variação na transmissão pode oferecer oportunidades para <em>intervenções direcionadas</em> se os indivíduos que mais contribuem para a transmissão (devido a fatores biológicos ou comportamentais), ou os ambientes em que ocorrem “eventos de superdisseminação”, compartilharem características sociodemográficas, ambientais ou geográficas que possam ser definidas.</p></li>
+</ul>
+<!-- what we dont know -->
+<p>Como podemos quantificar o potencial de uma nova infecção causar um grande surto com base em seu número de reprodução <span class="math inline">\(R\)</span> e na dispersão <span class="math inline">\(k\)</span> de sua distribuição de casos secundários?</p>
+<div class="cell">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption>Observed number of cumulative cases from the Middle East respiratory syndrome (MERS) outbreak in South Korea, 2015, alongside with simulated transmission chains assuming an offspring distribution with <span class="math inline">\(R=0.6\)</span> and <span class="math inline">\(k=0.02\)</span>.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<!-- what we are going to do -->
+<p>Neste episódio, usaremos o pacote <code>{epichains}</code> para simular cadeias de transmissão e estimar o potencial de grandes surtos após a introdução de um novo caso. Vamos utilizá-lo com funções do <code>{epiparameter}</code>, <code>{dplyr}</code> e <code>{purrr}</code>, portanto também carregando o pacote <code>{tidyverse}</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epichains)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="os-dois-pontos-duplos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="os-dois-pontos-duplos">Os dois pontos duplos (::)</h3>
+<p>Os dois pontos duplos <code>::</code> no R permitem que você chame uma função específica de um pacote sem carregar o pacote inteiro no ambiente atual. O pacote precisa estar instalado.</p>
+<p>Por exemplo, <code>dplyr::filter(data, condition)</code> usa <code>filter()</code> do pacote <code>{dplyr}</code>.</p>
+<p>Isso nos ajuda a lembrar as funções dos pacotes e a evitar conflitos de espaço de nomes (<em>namespace</em>).</p>
+</section>
+</div>
+</section>
+<section id="simulação-de-surtos-não-controlados" class="level2">
+<h2 class="anchored" data-anchor-id="simulação-de-surtos-não-controlados">Simulação de surtos não controlados</h2>
+<p>As epidemias de doenças infecciosas se propagam pelas populações quando uma cadeia de indivíduos infectados transmite a infecção a outros. Os <a href="https://epiverse-trace.github.io/epichains/articles/theoretical_background.html">processos de ramificação</a> podem ser usados para modelar essa transmissão. Um processo de ramificação é um processo estocástico (ou seja, um processo aleatório que pode ser descrito por uma distribuição de probabilidade conhecida), no qual cada indivíduo infeccioso dá origem a um número aleatório de indivíduos na geração seguinte de infecção, começando com o caso índice na geração 1. A distribuição do número de casos secundários que cada indivíduo gera é chamada de distribuição de casos secundários (<a href="https://epiverse-trace.github.io/epichains/articles/epichains.html">Azam &amp; Funk, 2024</a>).</p>
+<p>O <code>{epichains}</code> fornece métodos para analisar e simular o <em>tamanho</em> (<em>size</em>) e a <em>duração</em> (<em>length</em>) de processos de ramificação com uma dada distribuição de casos secundários. O <code>{epichains}</code> implementa um modelo rápido e simples para simular cadeias de transmissão a fim de avaliar o risco epidêmico, projetar casos no futuro e avaliar intervenções que alterem <span class="math inline">\(R\)</span>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="tamanho-e-duração-da-cadeia" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="tamanho-e-duração-da-cadeia">Tamanho e duração da cadeia</h3>
+<ul>
+<li><p>O <strong>tamanho</strong> (<em>size</em>) da cadeia de transmissão é definido como o número total de indivíduos infectados em todas as gerações de infecção, e</p></li>
+<li><p>a <strong>duração</strong> (<em>length</em>) da cadeia de transmissão é o número de gerações desde o primeiro caso até o último caso no surto antes do término da cadeia.</p></li>
+</ul>
+<p>O cálculo do <em>tamanho</em> inclui o primeiro caso, e o cálculo da <em>duração</em> contém a primeira geração em que o primeiro caso inicia a cadeia (veja a figura abaixo).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://raw.githubusercontent.com/epiverse-trace/epichains/main/vignettes/img/transmission_chain_example.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Um exemplo de cadeia de transmissão iniciando com um único caso C1.</strong> Os casos são representados por círculos azuis e setas indicando quem infectou quem. A cadeia cresce através das gerações Gen 1, Gen 2 e Gen 3, produzindo os casos C2, C3, C4, C5 e C6. A cadeia termina na geração Gen 3 com os casos C4, C5 e C6. O tamanho da cadeia de C1 é 6, incluindo C1 (isto é, a soma de todos os círculos azuis), e a duração é 3, o que inclui Gen 1 (número máximo de gerações alcançadas pela cadeia de C1) (<a href="https://epiverse-trace.github.io/epichains/articles/epichains.html">Azam &amp; Funk, 2024</a>).</figcaption>
+</figure>
+</div>
+</section>
+</div>
+<p>Para usar o <code>{epichains}</code>, precisamos conhecer (ou assumir) dois valores epidemiológicos fundamentais:</p>
+<ul>
+<li>a distribuição de casos secundários e</li>
+<li>o tempo de geração.</li>
+</ul>
+<p>Você deve reconhecer esses dois parâmetros do tutorial <a href="../episodios/01-acessar-atrasos.html">Acessar distribuições de atraso epidemiológicas</a>, onde introduzimos pela primeira vez o tempo de geração e o número de reprodução.</p>
+</section>
+<section id="obter-a-distribuição-de-casos-secundários" class="level2">
+<h2 class="anchored" data-anchor-id="obter-a-distribuição-de-casos-secundários">Obter a distribuição de casos secundários</h2>
+<p>Aqui assumimos que a distribuição de casos secundários do MERS segue uma distribuição binomial negativa, com valores de média (número de reprodução <span class="math inline">\(R\)</span>) e dispersão <span class="math inline">\(k\)</span> estimados a partir do linelist e dos dados de contato de <code>mers_korea_2015</code> do pacote de R <code>{outbreaks}</code> no episódio anterior.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mers_offspring <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">mean =</span> <span class="fl">0.60</span>, <span class="at">dispersion =</span> <span class="fl">0.02</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Distribuição de casos secundários para o epichains
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Fornecemos uma distribuição de casos secundários para o <code>{epichains}</code> fazendo referência à função do R que gera valores aleatórios da distribuição desejada. Para uma distribuição binomial negativa, usamos <code>rnbinom</code> com seus argumentos correspondentes <code>mu</code> e <code>size</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  offspring_dist <span class="ot">=</span> rnbinom,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  mu <span class="ot">=</span> mers_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  size <span class="ot">=</span> mers_offspring[<span class="st">"dispersion"</span>],</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Internamente, o <code>{epichains}</code> sorteará um valor aleatório, dados os parâmetros, para simular o número de novas infecções a partir de um indivíduo infectado (transmissão subsequente).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># gerar um número aleatório dada a família de distribuição e seus parâmetros</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># (execute esta linha muitas vezes para obter valores diferentes)</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rnbinom</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">mu =</span> mers_offspring[<span class="st">"mean"</span>], <span class="at">size =</span> mers_offspring[<span class="st">"dispersion"</span>])</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>O manual de referência em <code>?rnbinom</code> nos informa os argumentos específicos necessários.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<section id="distribuição-poisson-e-outras-distribuições" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="distribuição-poisson-e-outras-distribuições">Distribuição Poisson e outras distribuições</h3>
+<p>O <code>{epichains}</code> pode aceitar qualquer função do R que gere números aleatórios, portanto os argumentos especificados mudarão dependendo da função do R utilizada. Para mais detalhes sobre a variedade de opções possíveis, consulte o manual de referência da função.</p>
+<p>Por exemplo, suponha que queiramos usar uma distribuição Poisson para a distribuição de casos secundários. Primeiro, leia o argumento exigido no manual de referência de <code>?rpois</code>. Segundo, especifique o parâmetro do argumento <code>lambda</code>, também conhecido como taxa ou média na literatura. No <code>{epichains}</code>, isso pode ter a seguinte forma:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  offspring_dist <span class="ot">=</span> rpois,</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  lambda <span class="ot">=</span> mers_offspring[<span class="st">"mean"</span>],</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Neste exemplo, podemos especificar <code>lambda = mers_offspring["mean"]</code> porque o número médio de casos secundários gerados (ou seja, <span class="math inline">\(R\)</span>) deve ser o mesmo independentemente da distribuição que assumimos. O que muda é a variância da distribuição e, consequentemente, o nível de variação na transmissão em nível individual. Quando o parâmetro de dispersão <span class="math inline">\(k\)</span> se aproxima do infinito (<span class="math inline">\(k \rightarrow \infty\)</span>) em uma distribuição binomial negativa, a variância é igual à média. Isso torna a distribuição Poisson convencional um caso especial da distribuição binomial negativa.</p>
+</section>
+</div>
+</div>
+</section>
+<section id="obter-o-tempo-de-geração" class="level2">
+<h2 class="anchored" data-anchor-id="obter-o-tempo-de-geração">Obter o tempo de geração</h2>
+<p>A distribuição do <a href="../glossario.html#serialinterval">intervalo serial</a> é frequentemente utilizada para aproximar a distribuição do tempo de geração. Essa aproximação é comumente utilizada porque é mais fácil observar e aferir o início dos sintomas em cada caso do que o momento exato da infecção.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<section id="tempo-de-geração-vs.-intervalo-serial" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="tempo-de-geração-vs.-intervalo-serial">Tempo de geração vs.&nbsp;intervalo serial</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/serial-interval-observed.jpeg" class="img-fluid figure-img"></p>
+<figcaption>Um esquema da relação entre diferentes períodos de tempo da transmissão entre um infector e um infectado em um par de transmissão. A janela de exposição é definida como o intervalo de tempo com exposição viral, e a janela de transmissão é definida como o intervalo de tempo para transmissão subsequente em relação ao momento da infecção (<a href="https://academic.oup.com/jid/article/224/10/1664/6356465">Chung Lau et al., 2021</a>).</figcaption>
+</figure>
+</div>
+<p>No entanto, o uso do <em>intervalo serial</em> como aproximação do <em>tempo de geração</em> é válido principalmente para doenças nas quais a infecciosidade começa após o início dos sintomas (<a href="https://academic.oup.com/jid/article/224/10/1664/6356465">Chung Lau et al., 2021</a>). Nos casos em que a infecciosidade começa antes do início dos sintomas, os intervalos seriais podem assumir valores negativos, o que acontece com doenças com transmissão pré-sintomática (<a href="https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2">Nishiura et al., 2020</a>).</p>
+</section>
+</div>
+</div>
+<p>Vamos usar o pacote <code>{epiparameter}</code> para acessar e usar o intervalo serial disponível para a doença MERS. <!-- For `{epichains}` we need a **discretised** input distribution, se we use `epiparameter::discretise()`: --></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>serial_interval <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"mers"</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(serial_interval, <span class="at">day_range =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">25</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>O intervalo serial para o MERS tem média de 12.6 dias e desvio padrão de 2.8 dias.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Tempo de geração para o epichains
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Em cada etapa da simulação, o <code>{epichains}</code> sorteará valores de tempo de geração para cada nova infecção gerada a partir da distribuição de casos secundários. Com objetos da classe <code>&lt;epiparameter&gt;</code>, podemos usar a função de distribuição <code>epiparameter::generate()</code> para essa entrada.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Na etapa um, o número de novas infecções é 2, então:</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># gerar 2 valores aleatórios dada a distribuição do intervalo serial</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 14.60507 15.06471</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Na etapa dois, o número de novas infecções é 6, então:</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># gerar 6 valores aleatórios dada a distribuição do intervalo serial</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> <span class="dv">6</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 12.522027 16.109812 14.195049  6.875113 15.432142 12.349850</code></pre>
+</div>
+</div>
+<p>Como o valor fornecido em <code>times</code> vai variar a cada etapa, precisamos embutir <code>generate()</code> dentro de uma função. O <code>{epichains}</code> sorteará tantos valores aleatórios do tempo de geração quanto for o número de novas infecções naquela etapa. Isso terá a seguinte forma:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> x)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Essa interface é semelhante à que o <code>{cfr}</code> utiliza para se vincular ao <code>{epiparameter}</code>. Leia a vinheta sobre <a href="https://epiverse-trace.github.io/cfr/articles/delay_distributions.html">trabalhar com distribuições de atraso</a> para obter mais contexto.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>A função para gerar números aleatórios a partir de um objeto da classe <code>&lt;epiparameter&gt;</code> também pode aceitar esta notação:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">as.function</span>(<span class="at">x =</span> serial_interval, <span class="at">func_type =</span> <span class="st">"generate"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</div>
+</section>
+<section id="simular-uma-única-cadeia" class="level2">
+<h2 class="anchored" data-anchor-id="simular-uma-única-cadeia">Simular uma única cadeia</h2>
+<p>Agora estamos preparados para usar a função <code>simulate_chains()</code> do <code>{epichains}</code> para criar <strong>uma</strong> cadeia de transmissão:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_chains =</span> <span class="dv">1</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mu =</span> mers_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> mers_offspring[<span class="st">"dispersion"</span>],</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> x)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A função <code>simulate_chains()</code> exige três conjuntos de argumentos no mínimo:</p>
+<ul>
+<li><strong>controles de simulação</strong> (<code>n_chains</code> e <code>statistic</code>),</li>
+<li><strong>distribuição de casos secundários</strong> (<code>offspring_dist</code> e os parâmetros da distribuição exigidos), e</li>
+<li><strong>tempo de geração</strong> (<code>generation_time</code>).</li>
+</ul>
+<p>Nas linhas acima, descrevemos como especificar a distribuição de casos secundários e o tempo de geração. Os <strong>controles de simulação</strong> incluem pelo menos dois argumentos:</p>
+<ul>
+<li><code>n_chains</code>, que define o número de cadeias de transmissão a serem simuladas e</li>
+<li><code>statistic</code>, que define uma estatística da cadeia a ser acompanhada (seja <code>"size"</code> ou <code>"length"</code>) como critério de parada para cada cadeia em simulação.</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Critérios de parada
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Este é um recurso personalizável do <code>{epichains}</code>. Por padrão, as simulações de processos de ramificação terminam quando se extinguem. Para cadeias de transmissão de longa duração, você pode adicionar o argumento <code>stat_threshold</code> em <code>simulate_chains()</code>.</p>
+<p>Por exemplo, se definirmos um critério de parada para <code>statistic = "size"</code> com <code>stat_threshold = 500</code>, nenhum descendente adicional será produzido após uma cadeia atingir o tamanho de 500.</p>
+</div>
+</div>
+<p>A saída de <code>simulate_chains()</code> cria um objeto da classe <code>&lt;epichains&gt;</code>, que podemos analisar com mais detalhes no R.</p>
+</section>
+<section id="simular-múltiplas-cadeias" class="level2">
+<h2 class="anchored" data-anchor-id="simular-múltiplas-cadeias">Simular múltiplas cadeias</h2>
+<p>Podemos usar <code>simulate_chains()</code> para criar múltiplas cadeias e aumentar a probabilidade de simular projeções de surtos não controlados, dada uma distribuição de casos secundários sobredispersa.</p>
+<p>Precisamos especificar um elemento adicional:</p>
+<ul>
+<li><code>set.seed(&lt;integer&gt;)</code> é uma função usada para inicializar um gerador de números pseudoaleatórios. Ao especificar um valor de semente (o <code>&lt;integer&gt;</code>), você garante que a sequência de números produzida por funções aleatórias subsequentes, como <code>rnorm()</code> ou <code>simulate_chains()</code>, seja idêntica toda vez que o código for executado.</li>
+</ul>
+<p>Com essa configuração, cada <strong>cadeia</strong> representará <strong>um caso inicial</strong>. Esses casos por cadeia são independentes, isolados e sem interações. Isso significa que cada cadeia terá seu próprio contingente de suscetíveis, que você pode configurar usando os argumentos <code>pop</code> ou <code>percent_immune</code>.</p>
+<p>Agora, vamos simular <strong>100</strong> cadeias de transmissão:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Execute todo este chunk junto para que o set.seed() funcione!</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir a semente para o gerador de números pseudoaleatórios</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>multiple_epichains <span class="ot">&lt;-</span> epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_chains =</span> <span class="dv">100</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">mu =</span> mers_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> mers_offspring[<span class="st">"dispersion"</span>],</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> x)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Você pode inspecionar o <strong>tamanho</strong> total de cada cadeia simulada, equivalente ao número acumulado de casos por cadeia, aplicando <code>summary()</code> ao objeto da classe <code>&lt;epichains&gt;</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(multiple_epichains)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>`epichains_summary` object 
+
+  [1]   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1
+ [19]   7   1   1   1   1   1   1   1   1   1   1  14   1   2   1   1   2   1
+ [37]   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1
+ [55]   1   1   1   1 512   1   1   1   1   1 104   1   1   1   1   1   1   1
+ [73]   1   1   1   1   1   1   1   1   1   4   1   1   1   1   1   1   1   1
+ [91]   1   1   1   1   1   1   1   1   1   1
+
+ Simulated sizes: 
+
+Max: 512
+Min: 1</code></pre>
+</div>
+</div>
+<p>Podemos contar visualmente quantas cadeias alcançam mais de 100 casos infectados, além das contagens máxima e mínima.</p>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Use a última execução de <code>epichains::simulate_chains()</code> para simular múltiplas cadeias. Altere o argumento <code>statistic</code> de <code>"size"</code> para <code>"length"</code>. Execute a função <code>summary()</code>.</p>
+<ul>
+<li>Que característica da cadeia essa saída mostra?</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Se precisar de ajuda, volte à caixa de chamada “Tamanho e duração da cadeia” do início.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="ler-a-saída-do-epichains" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="ler-a-saída-do-epichains">Ler a saída do epichains</h3>
+<p>Para explorar o formato de saída do objeto da classe <code>&lt;epichains&gt;</code> com o nome <code>multiple_epichains</code>, vamos observar a cadeia simulada (<code>chain</code>) número 30.</p>
+</section>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
+<section id="o-objeto-epichains" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-objeto-epichains">O objeto epichains</h3>
+<p>Vamos usar <code>dplyr::filter()</code> para isso:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>chain_to_observe <span class="ot">&lt;-</span> <span class="dv">30</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="do">#### obter resumo do epichain ------------------------------------------------</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>multiple_epichains <span class="sc">%&gt;%</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(chain <span class="sc">==</span> chain_to_observe)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>`&lt;epichains&gt;` object
+
+&lt; epichains head (from first known infector) &gt;
+
+  chain infector infectee generation      time
+2    30        1        2          2 14.100967
+3    30        1        3          2 10.640301
+4    30        1        4          2 15.608764
+5    30        1        5          2 13.515424
+6    30        1        6          2  9.967474
+7    30        1        7          2  9.376222
+
+
+Number of chains: 100
+Number of infectors (known): 3
+Number of generations: 3
+Use `as.data.frame(&lt;object_name&gt;)` to view the full output in the console.</code></pre>
+</div>
+</div>
+<p>Essa saída contém duas partes:</p>
+<ul>
+<li>Uma impressão com <code>head()</code> dos pares infector-infectado <strong>a partir do primeiro infector conhecido</strong>.</li>
+<li>Um rodapé de resumo, o trecho de texto exibido na parte inferior:</li>
+</ul>
+<pre class="output"><code>Number of infectors (known): 3
+Number of generations: 3</code></pre>
+<p>A cadeia simulada (<code>chain</code>) número 30 possui três infectores conhecidos e três gerações. Esses números ficam mais visíveis ao imprimir os objetos <code>&lt;epichains&gt;</code> como um data frame (ou <code>&lt;tibble&gt;</code>).</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<section id="o-data-frame-do-epichains" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-data-frame-do-epichains">O data frame do epichains</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="do">#### data frame de infector-infectado ----------------------------------------</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>multiple_epichains <span class="sc">%&gt;%</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(chain <span class="sc">==</span> chain_to_observe) <span class="sc">%&gt;%</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">as_tibble</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 14 × 5
+   chain infector infectee generation  time
+   &lt;int&gt;    &lt;dbl&gt;    &lt;dbl&gt;      &lt;int&gt; &lt;dbl&gt;
+ 1    30       NA        1          1  0   
+ 2    30        1        2          2 14.1 
+ 3    30        1        3          2 10.6 
+ 4    30        1        4          2 15.6 
+ 5    30        1        5          2 13.5 
+ 6    30        1        6          2  9.97
+ 7    30        1        7          2  9.38
+ 8    30        1        8          2 11.5 
+ 9    30        4        9          3 31.0 
+10    30        4       10          3 25.3 
+11    30        4       11          3 28.5 
+12    30        4       12          3 29.6 
+13    30        4       13          3 25.9 
+14    30        4       14          3 24.6 </code></pre>
+</div>
+</div>
+<p>A cadeia 30 nos conta uma <strong>história</strong>:</p>
+<p>“Na primeira geração de transmissão em <code>time = 0</code>, um indivíduo (<code>ID = NA</code>) infectou o indivíduo com <code>ID = 1</code>. O indivíduo <code>ID = 1</code> é o primeiro infector conhecido.</p>
+<p>“Depois, na segunda geração de transmissão, o indivíduo <code>ID = 1</code> infectou sete indivíduos, de <code>ID = 2</code> a <code>ID = 8</code>. Essas infecções ocorreram no tempo (<code>time</code>) entre o dia 9 e o dia 15, após a primeira infecção conhecida.</p>
+<p>“Mais tarde, na terceira geração de transmissão, o indivíduo <code>ID = 4</code> infectou seis novos indivíduos, de <code>ID = 9</code> a <code>ID = 14</code>. Essas infecções ocorreram no tempo (<code>time</code>) entre o dia 24 e o dia 31, após a primeira infecção conhecida.”</p>
+</section>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-18-contents" aria-controls="callout-18" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-18" class="callout-18-contents callout-collapse collapse">
+<section id="um-data-frame-de-infectados" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="um-data-frame-de-infectados">Um data frame de infectados</h3>
+<p>O data frame de saída reúne <strong>indivíduos infectados</strong> (<em>infectees</em>) como a unidade de observação:</p>
+<ul>
+<li>Cada infectado tem um “ID” em <code>infectee</code>.</li>
+<li>Cada <em>infectado</em> que atuou como <em>infector</em> é registrado na coluna <code>infector</code> usando o seu “id” de <code>infectee</code>.</li>
+<li>Cada infectado foi infectado em uma geração (<code>generation</code>) e em um momento contínuo (<code>time</code>) específicos.</li>
+<li>O número da simulação é registrado na coluna <code>chain</code>.</li>
+</ul>
+<p><strong>Nota:</strong> O <code>Number of infectors (known)</code> inclui o indivíduo <code>ID = NA</code> na coluna <code>infector</code>. Isso se refere ao infector especificado como caso índice (no argumento <code>n_chains</code>), que iniciou a cadeia de transmissão para o infectado de <code>ID = 1</code>, em <code>generation = 1</code> e <code>time = 0</code>.</p>
+</section>
+</div>
+</div>
+</section>
+<section id="iterar-simulações" class="level2">
+<h2 class="anchored" data-anchor-id="iterar-simulações">Iterar simulações</h2>
+<p>Como vimos antes, podemos configurar a simulação de múltiplas cadeias simplesmente aumentando o número de cadeias (por exemplo, de <code>n_chains = 1</code> para <code>n_chains = 100</code>). No entanto, se precisarmos assumir que cada caso inicial começa (a ser infeccioso) em um momento diferente, isso só pode ser configurado em uma única função de simulação. Assim, precisamos <strong>iterar</strong> múltiplas vezes sobre uma configuração específica de simulação de cadeia para aumentar a probabilidade de simular projeções de surtos não controlados. A tabela a seguir compara as alternativas:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Execuções da simulação</th>
+<th>Casos iniciais</th>
+<th>Tempo de início (<code>t0</code>)</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Uma</td>
+<td>1</td>
+<td>Mesmo</td>
+<td><code>epichains::simulate_chains()</code> com <code>n_chains = 1</code></td>
+</tr>
+<tr class="even">
+<td>Múltiplas (100, p.&nbsp;ex.)</td>
+<td>1</td>
+<td>Mesmo</td>
+<td><code>epichains::simulate_chains()</code> com <code>n_chains = 100</code></td>
+</tr>
+<tr class="odd">
+<td>Múltiplas (100, p.&nbsp;ex.)</td>
+<td>Mais de um</td>
+<td>Diferente</td>
+<td>Iterar 100 vezes usando <code>purrr::map()</code> sobre <code>epichains::simulate()</code></td>
+</tr>
+</tbody>
+</table>
+<p>A principal diferença da terceira configuração é o argumento <code>t0</code> de <code>epichains::simulate_chains()</code>. O argumento <code>t0</code> define o momento inicial de cada caso inicial por cadeia.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Nota
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Um exemplo de uso de iteração está disponível na vinheta do <code>{epichains}</code> sobre <a href="https://epiverse-trace.github.io/epichains/articles/projecting_incidence.html">Projeção da incidência de doenças infecciosas: um exemplo com COVID-19</a>. O objetivo é simular a importação de 13 casos em diferentes momentos no tempo.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>epichains<span class="sc">::</span>covid19_sa[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ] <span class="sc">%&gt;%</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">start_time =</span> date <span class="sc">-</span> <span class="fu">min</span>(date))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 3
+  date       cases start_time
+  &lt;date&gt;     &lt;int&gt; &lt;drtn&gt;    
+1 2020-03-05     1 0 days    
+2 2020-03-07     1 2 days    
+3 2020-03-08     1 3 days    
+4 2020-03-09     4 4 days    
+5 2020-03-11     6 6 days    </code></pre>
+</div>
+</div>
+<p>Em vez de termos 100 cadeias começando no mesmo Dia 0 (<code>t0 = 0</code>, por padrão), cada simulação criará cadeias que começam em um momento diferente no tempo. Ela considerará o dia <code>2020-03-05</code> como Dia <code>0</code>. A primeira cadeia começa no dia 0, uma no dia 2, uma no dia 3, quatro no dia 4 e seis no dia 6. O argumento <code>t0</code> terá esta estrutura:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>t0 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="fu">rep</span>(<span class="dv">4</span>, <span class="dv">4</span>), <span class="fu">rep</span>(<span class="dv">6</span>, <span class="dv">6</span>))</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>t0</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0 2 3 4 4 4 4 6 6 6 6 6 6</code></pre>
+</div>
+</div>
+<p>Para aumentar a probabilidade de simular projeções de surtos não controlados, esse mesmo cenário precisa ser iterado 100 vezes. Isso nos ajudará a fornecer uma projeção com incerteza.</p>
+</div>
+</div>
+<p>Nesta seção, demonstraremos como construir a <strong>iteração</strong> com o <code>{epichains}</code> passo a passo. Vamos replicar convenientemente a mesma simulação anterior: 100 cadeias de transmissão com 1 caso inicial cada, começando no dia 0 (<code>t0 = 0</code>). Mas, em vez de usar <code>n_chains = 100</code>, iteraremos 100 vezes sobre a simulação de 1 cadeia de transmissão com 1 caso inicial começando no dia 0 (<code>n_chains = 1</code>).</p>
+<p>Precisamos especificar dois elementos adicionais:</p>
+<ul>
+<li><code>number_simulations</code>, que define o número de simulações a executar.</li>
+<li><code>initial_cases</code> define o número de casos iniciais a fornecer ao argumento <code>n_chains</code> explicado nas linhas acima.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Número de execuções da simulação</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>number_simulations <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Número de casos iniciais</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>initial_cases <span class="ot">&lt;-</span> <span class="dv">1</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>number_simulations</code> e <code>initial_cases</code> são convenientemente armazenados em objetos para facilitar o reuso posterior no fluxo de trabalho.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="iteração-usando-purrr" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="iteração-usando-purrr">Iteração usando purrr</h3>
+<p>A <a href="https://r4ds.hadley.nz/iteration.html">iteração</a> visa realizar a mesma ação em diferentes objetos repetidamente.</p>
+<p>Aprenda a usar as funções principais do <code>{purrr}</code>, como <code>map()</code>, no tutorial em vídeo do YouTube <a href="https://www.youtube.com/watch?v=nd-Y8b22YaQ">How to purrr</a> de Equitable Equations.</p>
+<p>Ou, se você utilizava anteriormente a família de funções <code>*apply</code>, consulte a vinheta do pacote sobre <a href="https://purrr.tidyverse.org/articles/base.html">purrr e base R</a>, que compartilha as principais diferenças, traduções diretas e exemplos.</p>
+</section>
+</div>
+<p>Para obter múltiplas cadeias, devemos aplicar a função <code>simulate_chains()</code> a cada cadeia definida por uma sequência de números de 1 a 100.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>purrr e epichains
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Primeiro, vamos esboçar como usamos <code>purrr::map()</code> com <code>epichains::simulate_chains()</code>. A função <code>map()</code> exige dois argumentos:</p>
+<ul>
+<li><code>.x</code>, com um vetor de números, e</li>
+<li><code>.f</code>, uma função para iterar sobre cada valor do vetor.</li>
+</ul>
+<p>O bloco de código abaixo</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># etapas:</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="co"># - purrr::map() executará 100 vezes a function(sim).</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="co"># - seq_len() cria um vetor com uma sequência de números (IDs de simulação de 1 a 100) e</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="co"># - function(sim) itera o {epichains} para cada número de ID de simulação, depois</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co"># - dplyr::mutate() adiciona uma coluna à saída do &lt;epichains&gt; com o número de ID da simulação.</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="co"># - purrr::list_rbind() combina todas as saídas da classe list (para cada ID de simulação) em um único data frame.</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>purrr<span class="sc">::</span><span class="fu">map</span>(</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">.x =</span> <span class="fu">seq_len</span>(number_simulations),</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">.f =</span> <span class="cf">function</span>(sim) {</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>    epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(...) <span class="sc">%&gt;%</span> <span class="co"># &lt;-- {epichains}</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">simulation_id =</span> sim)</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">list_rbind</span>()</span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="co"># pseudocódigo: não execute.</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>O elemento <code>sim</code> é incluído para registrar o número da iteração (<strong>ID da simulação</strong>) como uma nova coluna na saída do <code>&lt;epichains&gt;</code>. A função <code>purrr::list_rbind()</code> tem o objetivo de combinar todas as saídas em lista do <code>map()</code>.</p>
+<p><strong>Por que um ponto (<code>.</code>) como prefixo antes dos argumentos x e f?</strong> No livro <a href="https://design.tidyverse.org/dots-prefix.html">princípios de design do tidyverse</a>, há um capítulo sobre o prefixo de ponto!</p>
+</div>
+</div>
+<p>Agora estamos preparados para usar <code>purrr::map()</code> para simular repetidamente a partir de <code>simulate_chains()</code> e armazenar em um vetor de 1 a 100:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>simulated_chains_map <span class="ot">&lt;-</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">map</span>(</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">.x =</span> <span class="fu">seq_len</span>(number_simulations),</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">.f =</span> <span class="cf">function</span>(sim) {</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>      epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">n_chains =</span> initial_cases,</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>        <span class="at">mu =</span> mers_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">size =</span> mers_offspring[<span class="st">"dispersion"</span>],</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> x)</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">%&gt;%</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>        dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">simulation_id =</span> sim)</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">list_rbind</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Uma limitação da saída da iteração é que, para resumir o resultado, não podemos usar <code>summary(&lt;epichains&gt;)</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>simulated_chains_map <span class="sc">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">count</span>(simulation_id) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">pull</span>(n)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  [1]   1   1   1   1   1   1   1   1   1   1   1   1   1   1   9   1   1   1
+ [19]   1   1   1   1 113   1   1   1   1   1   1   1   1   1  19   1   1   1
+ [37]   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1
+ [55]   1   1   1   1   1   1   1   1   1   1   1   1   1   1  22   1   1   1
+ [73]   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1
+ [91]   1   1   1   1   1   1   1   1   1   1</code></pre>
+</div>
+</div>
+</section>
+<section id="visualizar-múltiplas-cadeias" class="level2">
+<h2 class="anchored" data-anchor-id="visualizar-múltiplas-cadeias">Visualizar múltiplas cadeias</h2>
+<p>Para aumentar a probabilidade de simular projeções de surtos não controlados, dada uma distribuição de casos secundários sobredispersa, vamos simular <strong>1.000 cadeias de transmissão</strong> com 1 caso inicial cada, começando no dia 0.</p>
+<p>Executaremos uma simulação com múltiplas réplicas, <strong>sem</strong> iteração para esta seção:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>multiple_epichains <span class="ot">&lt;-</span> epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_chains =</span> <span class="dv">1000</span>,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">mu =</span> mers_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> mers_offspring[<span class="st">"dispersion"</span>],</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> serial_interval, <span class="at">times =</span> x)</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Para visualizar as cadeias simuladas, precisamos de algum pré-processamento:</p>
+<ol type="1">
+<li>Vamos usar o <code>{dplyr}</code> para obter números de tempo arredondados, assemelhando-se a dias de vigilância.</li>
+<li>Contar os casos diários em cada simulação (por <code>chain</code>).</li>
+<li>Calcular o número acumulado de casos dentro de uma simulação.</li>
+</ol>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># agregado diário de casos</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>aggregate_chains <span class="ot">&lt;-</span> multiple_epichains <span class="sc">%&gt;%</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar a saída em data.frame do objeto &lt;epichains&gt;</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># obter o número arredondado (dia) dos tempos de infecção</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">day =</span> <span class="fu">ceiling</span>(time)) <span class="sc">%&gt;%</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># contar o número de casos incidentes diários em cada cadeia</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">count</span>(chain, day, <span class="at">name =</span> <span class="st">"cases_new"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># calcular o número acumulado de casos para cada cadeia</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(chain) <span class="sc">%&gt;%</span></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">cases_cumsum =</span> <span class="fu">cumsum</span>(cases_new)) <span class="sc">%&gt;%</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">ungroup</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Para compreender melhor a saída que acabamos de produzir, vamos imprimir mais linhas dela. As colunas relevantes são:</p>
+<ul>
+<li><strong><code>days</code></strong>: o intervalo de tempo discretizado da simulação (tempo contínuo agrupado em dias)</li>
+<li><strong><code>cases_new</code></strong>: o número de novos casos incidentes naquele dia</li>
+<li><strong><code>cases_cumsum</code></strong>: a soma acumulada de casos por dia, calculada dentro de cada cadeia de transmissão</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Imprimir algumas cadeias para entender melhor a saída</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>aggregate_chains <span class="sc">%&gt;%</span> </span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(chain) <span class="sc">%&gt;%</span> </span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n=</span><span class="dv">50</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Antes do gráfico, vamos criar uma tabela de resumo com a duração de tempo total e o tamanho de cada cadeia. Podemos usar o “combo” do <code>{dplyr}</code> formado por <code>group_by()</code>, <code>summarise()</code> e <code>ungroup()</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Resumir a duração e o tamanho das cadeias</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>summary_chains <span class="ot">&lt;-</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  aggregate_chains <span class="sc">%&gt;%</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(chain) <span class="sc">%&gt;%</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">summarise</span>(</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># duração</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">day_max =</span> <span class="fu">max</span>(day),</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># tamanho</span></span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cases_total =</span> <span class="fu">max</span>(cases_cumsum)</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">ungroup</span>()</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>summary_chains</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1,000 × 3
+   chain day_max cases_total
+   &lt;int&gt;   &lt;dbl&gt;       &lt;int&gt;
+ 1     1       0           1
+ 2     2       0           1
+ 3     3       0           1
+ 4     4       0           1
+ 5     5       0           1
+ 6     6       0           1
+ 7     7       0           1
+ 8     8       0           1
+ 9     9       0           1
+10    10       0           1
+# ℹ 990 more rows</code></pre>
+</div>
+</div>
+<p>Agora estamos preparados para usar o pacote <code>{ggplot2}</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizar cadeias de transmissão por casos acumulados</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># criar trajetórias de cadeias agrupadas</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> aggregate_chains,</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping =</span> <span class="fu">aes</span>(</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> day,</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> cases_cumsum,</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">group =</span> chain</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"black"</span>,</span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.25</span>,</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">show.legend =</span> <span class="cn">FALSE</span></span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># definir um limiar de 100 casos</span></span>
+<span id="cb38-16"><a href="#cb38-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> <span class="dv">100</span>), <span class="at">lty =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb38-17"><a href="#cb38-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb38-18"><a href="#cb38-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Day"</span>,</span>
+<span id="cb38-19"><a href="#cb38-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Cumulative cases"</span></span>
+<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Embora a maioria das introduções de 1 caso índice não gere casos secundários (N = 934) ou a maioria dos surtos se extinga rapidamente (duração mediana de 17 e tamanho mediano de 5.5), apenas 1 trajetórias epidêmicas entre as 100 simulações (1%) conseguem atingir mais de 100 casos infectados. Esse achado é particularmente notável porque o número de reprodução <span class="math inline">\(R\)</span> é menor que 1 (média da distribuição de casos secundários de 0.6), mas, dado um parâmetro de dispersão da distribuição de casos secundários de 0.02, ele demonstra o potencial de surtos explosivos da doença MERS.</p>
+<p>Podemos contar quantas cadeias atingiram o limiar de 100 casos usando funções do <code>{dplyr}</code>. Essa saída deve nos fornecer resultados equivalentes aos de <code>summary(multiple_epichains)</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># número de cadeias que atingiram o limiar de 100 casos</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>summary_chains <span class="sc">%&gt;%</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(cases_total <span class="sc">&gt;</span> <span class="dv">100</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 3
+  chain day_max cases_total
+  &lt;int&gt;   &lt;dbl&gt;       &lt;int&gt;
+1    65      34         103</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-22-contents" aria-controls="callout-22" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-22" class="callout-22-contents callout-collapse collapse">
+<section id="casos-observados-vs.-cadeias-simuladas" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="casos-observados-vs.-cadeias-simuladas">Casos observados vs.&nbsp;cadeias simuladas</h3>
+<p>Vamos sobrepor o número acumulado de casos observados usando o objeto de linelist do conjunto de dados <code>mers_korea_2015</code> do pacote de R <code>{outbreaks}</code>. Para preparar o conjunto de dados de forma que possamos plotar os casos totais diários ao longo do tempo, usamos o <code>{incidence2}</code> para converter o linelist em um objeto <code>&lt;incidence2&gt;</code>, completando as datas faltantes da série temporal com <code>complete_dates()</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(outbreaks)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>mers_cumcases <span class="ot">&lt;-</span> mers_korea_2015<span class="sc">$</span>linelist <span class="sc">%&gt;%</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># fluxo de trabalho do incidence2</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">incidence</span>(<span class="at">date_index =</span> <span class="st">"dt_onset"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>  incidence2<span class="sc">::</span><span class="fu">complete_dates</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># manipulação de dados usando {dplyr}</span></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">count_cumsum =</span> <span class="fu">cumsum</span>(count)) <span class="sc">%&gt;%</span></span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">"day"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">day =</span> <span class="fu">as.numeric</span>(day))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Use <code>plot()</code> para gerar um gráfico de incidência:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plotar o objeto incidence2</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mers_cumcases)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<p>Ao plotar o número observado de casos acumulados do surto de síndrome respiratória do Oriente Médio (MERS) na Coreia do Sul em 2015 ao lado das cadeias simuladas anteriormente, vemos que os casos observados seguiram uma trajetória que é consistente com a dinâmica explosiva simulada do surto (o que faz sentido, já que a simulação utiliza parâmetros baseados nesse surto específico).</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Quando aumentamos o parâmetro de dispersão de <span class="math inline">\(k = 0.01\)</span> para <span class="math inline">\(k = \infty\)</span> — e, portanto, reduzimos a variação na transmissão em nível individual — e assumimos um número de reprodução fixo <span class="math inline">\(R = 1.5\)</span>, a proporção de surtos simulados que atingiram o limiar de 100 casos aumenta. Isso ocorre porque os surtos simulados passam a ter uma dinâmica mais consistente e regular, em vez do alto nível de variabilidade observado anteriormente.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/see-nature04153_Fig2-c.jpg" class="img-fluid figure-img"></p>
+<figcaption><strong>Crescimento de surtos simulados com R = 1.5 e um caso inicial, condicional à não extinção.</strong> Os diagramas de caixa (boxes) mostram a mediana e o intervalo interquartil (IQR) da primeira geração da doença com 100 casos; os bigodes (whiskers) mostram os valores mais extremos dentro de 1,5 × IQR das caixas, e as cruzes indicam valores discrepantes (outliers). As porcentagens mostram a proporção de 10.000 surtos simulados que atingiram o limiar de 100 casos (<a href="https://www.nature.com/articles/nature04153">Lloyd-Smith et al., 2005</a>).</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Para se aprofundar">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Para se aprofundar
+</div>
+</div>
+<section id="projeções-de-disseminação-precoce" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="projeções-de-disseminação-precoce">Projeções de disseminação precoce</h3>
+<p>Na fase inicial da epidemia, você pode usar o <code>{epichains}</code> para aplicar um modelo de processos de ramificação a fim de projetar o número de casos futuros. Mesmo que o modelo leve em conta a aleatoriedade na transmissão e a variação no número de casos secundários, podem existir características locais adicionais que não consideramos. A análise de previsões iniciais feitas para a COVID em diferentes países usando essa estrutura de modelo constatou que as previsões eram frequentemente excessivamente confiantes (<em>overconfident</em>) (<a href="https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2020.25.18.2000543#validationofthemodel-1">Pearson et al., 2020</a>). Isso provavelmente ocorreu porque o modelo em tempo real não incluiu todas as mudanças na distribuição de casos secundários que estavam ocorrendo em nível local como resultado de mudanças comportamentais e medidas de controle. Você pode ler mais sobre a importância do contexto local em modelos de COVID-19 em <a href="https://www.nature.com/articles/s43588-020-00014-7">Eggo et al.&nbsp;(2020)</a>.</p>
+<p>Convidamos você a ler a vinheta sobre <a href="https://epiverse-trace.github.io/epichains/articles/projecting_incidence.html">Projetar a incidência de doenças infecciosas: um exemplo com COVID-19</a> para saber mais sobre como fazer previsões usando o <code>{epichains}</code>.</p>
+</section>
+</div>
+</section>
+<section id="desafios" class="level2">
+<h2 class="anchored" data-anchor-id="desafios">Desafios</h2>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="potencial-de-grande-surto-de-monkeypox" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="potencial-de-grande-surto-de-monkeypox">Potencial de grande surto de Monkeypox</h3>
+<p>Avalie o potencial de um novo caso de Monkeypox (Mpox) gerar um grande surto explosivo.</p>
+<ul>
+<li>Simule 1.000 cadeias de transmissão com 1 caso inicial cada, começando no dia 0.</li>
+<li>Use o pacote apropriado para acessar dados de atraso de surtos anteriores.</li>
+<li>Quantas trajetórias simuladas alcançam mais de 100 casos infectados?</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-24-contents" aria-controls="callout-24" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-24" class="callout-24-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Com o <code>{epiparameter}</code>, você pode acessar e usar distribuições de casos secundários e de atraso de surtos anteriores de Ebola.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(<span class="at">epi_name =</span> <span class="st">"offspring"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">parameter_tbl</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">count</span>(disease, epi_name)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Parameter table:
+# A data frame:    6 × 3
+  disease                       epi_name                   n
+  &lt;chr&gt;                         &lt;chr&gt;                  &lt;int&gt;
+1 Ebola Virus Disease           offspring distribution     1
+2 Hantavirus Pulmonary Syndrome offspring distribution     1
+3 Mpox                          offspring distribution     1
+4 Pneumonic Plague              offspring distribution     1
+5 SARS                          offspring distribution     2
+6 Smallpox                      offspring distribution     4</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(<span class="at">epi_name =</span> <span class="st">"serial interval"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">parameter_tbl</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">count</span>(disease, epi_name)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Parameter table:
+# A data frame:    6 × 3
+  disease               epi_name            n
+  &lt;chr&gt;                 &lt;chr&gt;           &lt;int&gt;
+1 COVID-19              serial interval     4
+2 Ebola Virus Disease   serial interval     4
+3 Influenza             serial interval     1
+4 MERS                  serial interval     2
+5 Marburg Virus Disease serial interval     2
+6 Mpox                  serial interval     5</code></pre>
+</div>
+</div>
+<p>Além disso, dado que você precisa apenas de uma cadeia por iteração começando no mesmo dia, pode não ser necessário usar iteração para este exercício.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-25-contents" aria-controls="callout-25" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-25" class="callout-25-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># carregar pacotes --------------------------------------------------------</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a><span class="co"># atrasos -----------------------------------------------------------------</span></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>mpox_offspring_epiparam <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"mpox"</span>,</span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"offspring"</span>,</span>
+<span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb47-12"><a href="#cb47-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-14"><a href="#cb47-14" aria-hidden="true" tabindex="-1"></a>mpox_offspring <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">get_parameters</span>(mpox_offspring_epiparam)</span>
+<span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-16"><a href="#cb47-16" aria-hidden="true" tabindex="-1"></a>mpox_serialint <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb47-17"><a href="#cb47-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"mpox"</span>,</span>
+<span id="cb47-18"><a href="#cb47-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial interval"</span>,</span>
+<span id="cb47-19"><a href="#cb47-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb47-20"><a href="#cb47-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb47-21"><a href="#cb47-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-22"><a href="#cb47-22" aria-hidden="true" tabindex="-1"></a><span class="co"># iterar ------------------------------------------------------------------</span></span>
+<span id="cb47-23"><a href="#cb47-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-24"><a href="#cb47-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir a semente para o gerador de números pseudoaleatórios</span></span>
+<span id="cb47-25"><a href="#cb47-25" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb47-26"><a href="#cb47-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-27"><a href="#cb47-27" aria-hidden="true" tabindex="-1"></a>simulated_chains_mpox <span class="ot">&lt;-</span> epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb47-28"><a href="#cb47-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_chains =</span> <span class="dv">1000</span>,</span>
+<span id="cb47-29"><a href="#cb47-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb47-30"><a href="#cb47-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb47-31"><a href="#cb47-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">mu =</span> mpox_offspring[<span class="st">"mean"</span>],</span>
+<span id="cb47-32"><a href="#cb47-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> mpox_offspring[<span class="st">"dispersion"</span>],</span>
+<span id="cb47-33"><a href="#cb47-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> mpox_serialint, <span class="at">times =</span> x)</span>
+<span id="cb47-34"><a href="#cb47-34" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb47-35"><a href="#cb47-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-36"><a href="#cb47-36" aria-hidden="true" tabindex="-1"></a><span class="co"># visualizar --------------------------------------------------------------</span></span>
+<span id="cb47-37"><a href="#cb47-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-38"><a href="#cb47-38" aria-hidden="true" tabindex="-1"></a><span class="co"># agregado diário de casos</span></span>
+<span id="cb47-39"><a href="#cb47-39" aria-hidden="true" tabindex="-1"></a>simulated_chains_mpox_day <span class="ot">&lt;-</span> simulated_chains_mpox <span class="sc">%&gt;%</span></span>
+<span id="cb47-40"><a href="#cb47-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar a saída em data.frame do objeto &lt;epichains&gt;</span></span>
+<span id="cb47-41"><a href="#cb47-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb47-42"><a href="#cb47-42" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Contar o número diário de casos em cada cadeia</span></span>
+<span id="cb47-43"><a href="#cb47-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">day =</span> <span class="fu">ceiling</span>(time)) <span class="sc">%&gt;%</span></span>
+<span id="cb47-44"><a href="#cb47-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(chain, day, <span class="at">name =</span> <span class="st">"cases"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb47-45"><a href="#cb47-45" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calcular o número acumulado de casos para cada cadeia</span></span>
+<span id="cb47-46"><a href="#cb47-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(chain) <span class="sc">%&gt;%</span></span>
+<span id="cb47-47"><a href="#cb47-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">cumulative_cases =</span> <span class="fu">cumsum</span>(cases)) <span class="sc">%&gt;%</span></span>
+<span id="cb47-48"><a href="#cb47-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb47-49"><a href="#cb47-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-50"><a href="#cb47-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizar cadeias de transmissão por casos acumulados</span></span>
+<span id="cb47-51"><a href="#cb47-51" aria-hidden="true" tabindex="-1"></a>simulated_chains_mpox_day <span class="sc">%&gt;%</span></span>
+<span id="cb47-52"><a href="#cb47-52" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Criar trajetórias de cadeias agrupadas</span></span>
+<span id="cb47-53"><a href="#cb47-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> day, <span class="at">y =</span> cumulative_cases, <span class="at">group =</span> chain)) <span class="sc">+</span></span>
+<span id="cb47-54"><a href="#cb47-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">alpha =</span> <span class="fl">0.25</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb47-55"><a href="#cb47-55" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Definir um limiar de 100 casos</span></span>
+<span id="cb47-56"><a href="#cb47-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> <span class="dv">100</span>), <span class="at">lty =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb47-57"><a href="#cb47-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Day"</span>, <span class="at">y =</span> <span class="st">"Cumulative cases"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Assumindo um surto de Monkeypox com <span class="math inline">\(R\)</span> = 0.32 e <span class="math inline">\(k\)</span> = 0.58, não há nenhuma trajetória entre as 1.000 simulações que alcance mais de 100 casos infectados. Em comparação com o MERS (<span class="math inline">\(R\)</span> = 0.6 e <span class="math inline">\(k\)</span> = 0.02).</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-26-contents" aria-controls="callout-26" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-26" class="callout-26-contents callout-collapse collapse">
+<section id="avaliação-de-risco-epidêmico-levando-em-conta-o-superspreading" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="avaliação-de-risco-epidêmico-levando-em-conta-o-superspreading">Avaliação de risco epidêmico levando em conta o superspreading</h3>
+<p>Com o <code>{superspreading}</code>, você pode obter soluções numéricas para processos que o <code>{epichains}</code> resolve usando processos de ramificação. Convidamos você a ler a vinheta do <code>{superspreading}</code> sobre <a href="https://epiverse-trace.github.io/superspreading/articles/epidemic_risk.html">Risco epidêmico</a> e responder a:</p>
+<ul>
+<li>Qual é a probabilidade de um patógeno recém-introduzido causar um grande surto?</li>
+<li>Qual é a probabilidade de uma infecção, por acaso, não se estabelecer após a(s) introdução(ões) inicial(is)?</li>
+<li>Qual é a probabilidade de o surto ser contido?</li>
+</ul>
+<p>Verifique como essas estimativas variam de forma não linear em relação ao número médio de reprodução <span class="math inline">\(R\)</span> e à dispersão <span class="math inline">\(k\)</span> de uma dada doença.</p>
+<!-- draft challenge -->
+<!-- Calculate the probability a new Mpox case will lead to a large outbreak in the absence of control measures. Use the appropriate package to access delay data from previous outbreaks. -->
+</section>
+</div>
+</div>
+</section>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="a-partir-de-uma-distribuição-de-casos-secundários" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="a-partir-de-uma-distribuição-de-casos-secundários">A partir de uma distribuição de casos secundários</h3>
+<p><a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(15)70135-0/fulltext">Christian Althaus, 2015</a> reutilizou dados publicados por <a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(14)71075-8/fulltext#gr2">Faye et al., 2015 (Figura 2)</a> sobre a árvore de transmissão da doença pelo vírus Ebola em Conacri, Guiné, em 2014.</p>
+<p>Usando os dados na aba de <strong>dica</strong>:</p>
+<ul>
+<li>Estime a distribuição de casos secundários a partir dos dados de casos secundários.</li>
+<li>Em seguida, estime o potencial de grandes surtos a partir desses dados, simulando 100 execuções com um caso inicial.</li>
+<li>Imprima o resumo do objeto da classe <code>&lt;epichains&gt;</code>. Isso deve nos ajudar a contar quantas cadeias atingem um tamanho (<code>size</code>) de mais de 100 casos infectados.</li>
+</ul>
+<p>Para obter resultados reproduzíveis, use <code>set.seed(645)</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Código com os dados da árvore de transmissão redigido por <a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(15)70135-0/fulltext">Christian Althaus, 2015</a>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Número de indivíduos nas árvores</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">152</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Número de casos secundários para todos os indivíduos</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>c1 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">14</span>, <span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">8</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>,</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>        <span class="dv">4</span>, <span class="dv">9</span>, <span class="dv">9</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">17</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">2</span>,</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>        <span class="dv">5</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">9</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>c0 <span class="ot">&lt;-</span> <span class="fu">c</span>(c1, <span class="fu">rep</span>(<span class="dv">0</span>, n <span class="sc">-</span> <span class="fu">length</span>(c1)))</span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>c0 <span class="sc">%&gt;%</span></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">enframe</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(value)) <span class="sc">+</span></span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Desafio opcional:</p>
+<ul>
+<li>Reproduza a Figura (B) de <a href="https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(15)70135-0/fulltext">Christian Althaus, 2015</a> com a saída da simulação.</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-30-contents" aria-controls="callout-30" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-30" class="callout-30-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># carregar pacotes ------------------------</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epichains)</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ajustar uma distribuição binomial negativa ------------------------------</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Ajuste de uma distribuição binomial negativa ao número de casos secundários</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>fit.cases <span class="ot">&lt;-</span> fitdistrplus<span class="sc">::</span><span class="fu">fitdist</span>(c0, <span class="st">"nbinom"</span>)</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>fit.cases</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Fitting of the distribution ' nbinom ' by maximum likelihood 
+Parameters:
+      estimate Std. Error
+size 0.1814260 0.03990278
+mu   0.9537995 0.19812301</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># parâmetros do intervalo serial ------------------------------------------</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>ebola_serialinter <span class="ot">&lt;-</span> epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial interval"</span>,</span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a><span class="co"># simular trajetórias de surto --------------------------------------------</span></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir a semente para o gerador de números pseudoaleatórios</span></span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">645</span>)</span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>sim_multiple_chains <span class="ot">&lt;-</span> epichains<span class="sc">::</span><span class="fu">simulate_chains</span>(</span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_chains =</span> <span class="dv">100</span>,</span>
+<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">statistic =</span> <span class="st">"size"</span>,</span>
+<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">offspring_dist =</span> rnbinom,</span>
+<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">mu =</span> fit.cases<span class="sc">$</span>estimate[<span class="st">"mu"</span>],</span>
+<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> fit.cases<span class="sc">$</span>estimate[<span class="st">"size"</span>],</span>
+<span id="cb52-19"><a href="#cb52-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">generation_time =</span> <span class="cf">function</span>(x) <span class="fu">generate</span>(<span class="at">x =</span> ebola_serialinter, <span class="at">times =</span> x)</span>
+<span id="cb52-20"><a href="#cb52-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a><span class="co"># resumir -----------------------------------------</span></span>
+<span id="cb52-23"><a href="#cb52-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-24"><a href="#cb52-24" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sim_multiple_chains)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>`epichains_summary` object 
+
+  [1]    9    1    2    1    1    4    1   20   14    1    1  131    1    2    1
+ [16]    1    7    1    2 2889    1    1    1   13    3    1    1    1    1    1
+ [31]    5    6    1    1    1    1    1    1    1    1    2    1    1    2    1
+ [46]    1    1    1    1    1    1    1    1    1  335    1   11    3   24    6
+ [61]    1    1    1    1    1    1    1    1    1    1    1    1    1    1  111
+ [76]    1    1    1    1    1    1    2    1  544    1    1    1    3    1    2
+ [91]    6    1    1    1    1    1    1    1 2091    1
+
+ Simulated sizes: 
+
+Max: 2889
+Min: 1</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># visualizar ---------------------------------------</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>sim_chains_aggregate <span class="ot">&lt;-</span></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>  sim_multiple_chains <span class="sc">%&gt;%</span></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># usar a saída em data.frame do objeto &lt;epichains&gt;</span></span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Contar o número diário de casos em cada cadeia</span></span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">day =</span> <span class="fu">ceiling</span>(time)) <span class="sc">%&gt;%</span></span>
+<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(chain, day, <span class="at">name =</span> <span class="st">"cases"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calcular o número acumulado de casos para cada cadeia</span></span>
+<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(chain) <span class="sc">%&gt;%</span></span>
+<span id="cb54-12"><a href="#cb54-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">cumulative_cases =</span> <span class="fu">cumsum</span>(cases)) <span class="sc">%&gt;%</span></span>
+<span id="cb54-13"><a href="#cb54-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb54-14"><a href="#cb54-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-15"><a href="#cb54-15" aria-hidden="true" tabindex="-1"></a>sim_chains_aggregate <span class="sc">%&gt;%</span></span>
+<span id="cb54-16"><a href="#cb54-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Criar trajetórias de cadeias agrupadas</span></span>
+<span id="cb54-17"><a href="#cb54-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> day, <span class="at">y =</span> cumulative_cases, <span class="at">group =</span> chain)) <span class="sc">+</span></span>
+<span id="cb54-18"><a href="#cb54-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb54-19"><a href="#cb54-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Definir um limiar de 100 casos</span></span>
+<span id="cb54-20"><a href="#cb54-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> <span class="dv">100</span>), <span class="at">lty =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb54-21"><a href="#cb54-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="dv">0</span>, <span class="dv">100</span>) <span class="sc">+</span></span>
+<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlim</span>(<span class="dv">0</span>, <span class="dv">100</span>) <span class="sc">+</span></span>
+<span id="cb54-23"><a href="#cb54-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Day"</span>, <span class="at">y =</span> <span class="st">"Cumulative cases"</span>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="07-superspreading-simular_files/figure-html/unnamed-chunk-33-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Notavelmente, mesmo com R0 menor que 1 (R = 0.95), podemos ter surtos potencialmente explosivos. A variação observada na infecciosidade individual no Ebola significa que, embora a probabilidade de extinção seja alta, novos casos índice também têm o potencial de ressurgimento explosivo da epidemia.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Pontos-chave">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Pontos-chave
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Use o <code>{epichains}</code> para simular o potencial de grandes surtos de doenças com distribuições de casos secundários sobredispersas.</li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../episodios/06-superspreading-estimar.html" class="pagination-link" aria-label="Levar em conta o superspreading">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Levar em conta o superspreading</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../notas/equacao-de-renovacao.html" class="pagination-link" aria-label="Introdução à equação de renovação">
+        <span class="nav-page-text"><span class="chapter-title">Introdução à equação de renovação</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/07-superspreading-simular.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

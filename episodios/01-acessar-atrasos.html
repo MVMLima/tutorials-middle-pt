@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Acessar distribuições de atraso epidemiológicas – Análise em tempo real e previsão para surtos com R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../episodios/02-quantificar-transmissibilidade.html" rel="next">
+<link href="../setup.html" rel="prev">
+<link href="../img/pkgs-hexlogos.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-4f8723c4e91b4923163491bd987d7814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Nenhum resultado",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copiar link para a busca",
+    "search-hide-matches-text": "Esconder correspondências adicionais",
+    "search-more-match-text": "mais correspondência neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Procurar"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../episodios/01-acessar-atrasos.html"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Procurar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Análise em tempo real e previsão para surtos com R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/MVMLima/tutorials-middle-pt" title="Código fonte" class="quarto-navigation-tool px-1" aria-label="Código fonte"><i class="bi bi-github"></i></a>
+    <div class="dropdown">
+      <a href="" title="Compartilhar" id="quarto-navigation-tool-dropdown-0" class="quarto-navigation-tool dropdown-toggle px-1" data-bs-toggle="dropdown" aria-expanded="false" role="link" aria-label="Compartilhar"><i class="bi bi-share"></i></a>
+      <ul class="dropdown-menu" aria-labelledby="quarto-navigation-tool-dropdown-0">
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://twitter.com/intent/tweet?url=|url|">
+              <i class="bi bi-twitter pe-1"></i>
+            Twitter
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item sidebar-tools-main-item" href="https://www.linkedin.com/sharing/share-offsite/?url=|url|">
+              <i class="bi bi-linkedin pe-1"></i>
+            LinkedIn
+            </a>
+          </li>
+      </ul>
+    </div>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Procurar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Análise em tempo real e previsão para surtos com R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Configuração</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/01-acessar-atrasos.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/02-quantificar-transmissibilidade.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Quantificar a transmissibilidade</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/03-funcoes-de-atraso.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usar distribuições de atraso na análise</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/04-criar-previsoes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Criar previsão de curto prazo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/05-severidade-estatica.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Estimativa da gravidade de um surto</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/06-superspreading-estimar.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Levar em conta o superspreading</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../episodios/07-superspreading-simular.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Simular cadeias de transmissão</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Apêndices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Alternar seção">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/equacao-de-renovacao.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Introdução à equação de renovação</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notas/ajuste-cfr-atrasos.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Como ajustar o CFR pelo atraso</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../perfis.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Para quem são estes tutoriais</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../glossario.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Glossário de termos: Epiverse-TRACE</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../instrutor.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Notas para quem conduz a oficina</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../licenca.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Licença e créditos</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Nesta página</h2>
+   
+  <ul>
+  <li><a href="#introdução" id="toc-introdução" class="nav-link active" data-scroll-target="#introdução">Introdução</a></li>
+  <li><a href="#o-problema" id="toc-o-problema" class="nav-link" data-scroll-target="#o-problema">O problema</a></li>
+  <li><a href="#tempo-de-geração-vs.-intervalo-serial" id="toc-tempo-de-geração-vs.-intervalo-serial" class="nav-link" data-scroll-target="#tempo-de-geração-vs.-intervalo-serial">Tempo de geração vs.&nbsp;intervalo serial</a></li>
+  <li><a href="#escolhendo-parâmetros-epidemiológicos" id="toc-escolhendo-parâmetros-epidemiológicos" class="nav-link" data-scroll-target="#escolhendo-parâmetros-epidemiológicos">Escolhendo parâmetros epidemiológicos</a></li>
+  <li><a href="#selecionar-uma-única-distribuição" id="toc-selecionar-uma-única-distribuição" class="nav-link" data-scroll-target="#selecionar-uma-única-distribuição">Selecionar uma única distribuição</a></li>
+  <li><a href="#extrair-as-estatísticas-resumo" id="toc-extrair-as-estatísticas-resumo" class="nav-link" data-scroll-target="#extrair-as-estatísticas-resumo">Extrair as estatísticas resumo</a></li>
+  <li><a href="#desafios" id="toc-desafios" class="nav-link" data-scroll-target="#desafios">Desafios</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/01-acessar-atrasos.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Acessar distribuições de atraso epidemiológicas</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled" title="Perguntas">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Perguntas
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Como obter acesso a distribuições de atraso de doenças a partir de uma base de dados pré-estabelecida para uso em análises?</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Objetivos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Objetivos
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Obter atrasos a partir de uma base de dados de busca na literatura com o <code>{epiparameter}</code>.</li>
+<li>Obter parâmetros de distribuição e estatísticas resumo de distribuições de atraso.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Pré-requisitos">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Pré-requisitos
+</div>
+</div>
+<section id="pré-requisitos" class="level2 callout-body-container callout-body">
+<h2 class="anchored" data-anchor-id="pré-requisitos">Pré-requisitos</h2>
+<p>Este episódio requer que você tenha familiaridade com:</p>
+<p><strong>Ciência de dados</strong> : Programação básica com R.</p>
+<p><strong>Teoria epidêmica</strong> : parâmetros epidemiológicos, períodos temporais de doenças, como período de incubação, tempo de geração e intervalo serial.</p>
+</section>
+</div>
+<section id="introdução" class="level2">
+<h2 class="anchored" data-anchor-id="introdução">Introdução</h2>
+<p>As doenças infecciosas seguem um ciclo de infecção, que geralmente inclui as seguintes fases: período pré-sintomático, período sintomático e período de recuperação, conforme descrito por sua <a href="../glossario.html#naturalhistory">história natural</a>. Esses períodos de tempo podem ser usados para compreender a dinâmica de transmissão e orientar intervenções de prevenção e controle de doenças.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/time-periods.jpg" class="img-fluid figure-img"></p>
+<figcaption>Definição dos principais períodos de tempo. De <a href="https://www.sciencedirect.com/science/article/pii/S2468042721000038">Xiang et al, 2021</a></figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Definições
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Consulte o <a href="../glossario.html">glossário</a> para as definições de todos os períodos de tempo da figura acima!</p>
+</div>
+</div>
+<p>No entanto, no início de uma epidemia, os esforços para compreender a epidemia e as implicações para o controle podem ser atrasados pela falta de uma maneira fácil de acessar parâmetros-chave para a doença de interesse (<a href="https://mrc-ide.github.io/epireview/">Nash et al., 2023</a>). Projetos como <code>{epiparameter}</code> e <a href="https://mrc-ide.github.io/epireview/">epireview</a> estão construindo catálogos online seguindo protocolos de síntese da literatura que podem ajudar a orientar análises e parametrizar modelos, fornecendo uma biblioteca de parâmetros epidemiológicos previamente estimados de surtos passados.</p>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Modelos iniciais para a COVID-19 usaram parâmetros de outros coronavírus. <a href="https://www.thelancet.com/article/S1473-3099(20)30144-4/fulltext" class="uri">https://www.thelancet.com/article/S1473-3099(20)30144-4/fulltext</a></p>
+</div>
+</div>
+</div>
+<p>Para ilustrar como usar o pacote R <code>{epiparameter}</code> no seu pipeline de análise, nosso objetivo neste episódio será acessar um conjunto específico de parâmetros epidemiológicos da literatura, em vez de extraí-los de artigos e copiar e colar manualmente. Em seguida, vamos conectá-los a um fluxo de trabalho de análise do <code>{EpiNow2}</code>.</p>
+<!-- In this episode, we'll learn how to access one specific set of epidemiological parameters from the literature and then get their **summary statistics** using `{epiparameter}`.  -->
+<p>Vamos começar carregando o pacote <code>{epiparameter}</code>. Usaremos o pipe <code>%&gt;%</code> para conectar algumas de suas funções e algumas funções do <code>{tibble}</code> e do <code>{dplyr}</code>, então vamos carregar também o pacote <code>{tidyverse}</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(epiparameter)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<section id="o-operador-de-dois-pontos-duplos" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-operador-de-dois-pontos-duplos">O operador de dois-pontos duplos</h3>
+<p>O operador de dois-pontos duplos <code>::</code> no R permite que você chame uma função específica de um pacote sem carregar o pacote inteiro no ambiente atual.</p>
+<p>Por exemplo, <code>dplyr::filter(data, condition)</code> usa <code>filter()</code> do pacote <code>{dplyr}</code>.</p>
+<p>Isso nos ajuda a lembrar as funções dos pacotes e a evitar conflitos de namespace.</p>
+</section>
+</div>
+</section>
+<section id="o-problema" class="level2">
+<h2 class="anchored" data-anchor-id="o-problema">O problema</h2>
+<p>Se quisermos estimar a transmissibilidade de uma infecção, é comum usar um pacote como o <code>{EpiEstim}</code> ou o <code>{EpiNow2}</code>.</p>
+<ul>
+<li><p>O pacote <code>{EpiEstim}</code> permite a estimativa em tempo real do <a href="../glossario.html#effectiverepro">número de reprodução</a> usando dados de casos ao longo do tempo, refletindo como a transmissão varia com base em quando os sintomas surgem.</p></li>
+<li><p>Para estimar a transmissão com base em quando as pessoas foram de fato infectadas (em vez do início dos sintomas), o pacote <code>{EpiNow2}</code> estende essa ideia combinando-a com um modelo que leva em conta delays nos dados observados.</p></li>
+</ul>
+<p>Ambos os pacotes exigem algumas informações epidemiológicas como entrada. Por exemplo, no <code>{EpiNow2}</code> podemos usar <code>EpiNow2::Gamma()</code> para especificar um <a href="../glossario.html#generationtime">tempo de geração</a> como uma distribuição de probabilidade Gamma adicionando sua média (<code>mean</code>), desvio padrão (<code>sd</code>) e valor máximo (<code>max</code>).</p>
+<p>Para especificar um <code>generation_time</code> que segue uma distribuição <em>Gamma</em> com média <span class="math inline">\(\mu = 4\)</span>, desvio padrão <span class="math inline">\(\sigma = 2\)</span> e um valor máximo de 20, escrevemos:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>generation_time <span class="ot">&lt;-</span> </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  EpiNow2<span class="sc">::</span><span class="fu">Gamma</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> <span class="dv">4</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd =</span> <span class="dv">2</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">max =</span> <span class="dv">20</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>É uma prática comum entre analistas pesquisar manualmente a literatura disponível e copiar e colar as <strong>estatísticas resumo</strong> ou os <strong>parâmetros da distribuição</strong> de publicações científicas. Um desafio frequentemente enfrentado é que a apresentação de diferentes distribuições estatísticas não é consistente na literatura (por exemplo, um artigo pode relatar apenas a média, em vez de toda a distribuição subjacente). O objetivo do <code>{epiparameter}</code> é facilitar o acesso a estimativas confiáveis de parâmetros de distribuição para diversas doenças infecciosas, para que possam ser facilmente implementadas em pipelines de análise de surtos.</p>
+<p>Neste episódio, vamos <em>acessar</em> as estatísticas resumo de um tempo de geração para COVID-19 a partir da biblioteca de parâmetros epidemiológicos fornecida pelo <code>{epiparameter}</code>. Essas métricas podem ser usadas para estimar a transmissibilidade dessa doença usando o <code>{EpiNow2}</code> nos episódios seguintes.</p>
+<p>Vamos começar verificando quantas entradas estão atualmente disponíveis na <strong>base de dados de distribuições epidemiológicas</strong> do <code>{epiparameter}</code> usando <code>epiparameter_db()</code> para a distribuição epidemiológica <code>epi_name</code> chamada tempo de geração com a string <code>"generation"</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"generation"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 3 results that match the criteria (2 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># List of 3 &lt;epiparameter&gt; objects
+Number of diseases: 2
+❯ Chikungunya ❯ Influenza
+Number of epi parameters: 1
+❯ generation time
+[[1]]
+Disease: Influenza
+Pathogen: Influenza-A-H1N1
+Epi Parameter: generation time
+Study: Lessler J, Reich N, Cummings D, New York City Department of Health and
+Mental Hygiene Swine Influenza Investigation Team (2009). "Outbreak of
+2009 Pandemic Influenza A (H1N1) at a New York City School." _The New
+England Journal of Medicine_. doi:10.1056/NEJMoa0906089
+&lt;https://doi.org/10.1056/NEJMoa0906089&gt;.
+Distribution: weibull (days)
+Parameters:
+  shape: 2.360
+  scale: 3.180
+
+[[2]]
+Disease: Chikungunya
+Pathogen: Chikungunya Virus
+Epi Parameter: generation time
+Study: Salje H, Cauchemez S, Alera M, Rodriguez-Barraquer I, Thaisomboonsuk B,
+Srikiatkhachorn A, Lago C, Villa D, Klungthong C, Tac-An I, Fernandez
+S, Velasco J, Roque Jr V, Nisalak A, Macareo L, Levy J, Cummings D,
+Yoon I (2015). "Reconstruction of 60 Years of Chikungunya Epidemiology
+in the Philippines Demonstrates Episodic and Focal Transmission." _The
+Journal of Infectious Diseases_. doi:10.1093/infdis/jiv470
+&lt;https://doi.org/10.1093/infdis/jiv470&gt;.
+Parameters: &lt;no parameters&gt;
+Mean: 14 (days)
+
+[[3]]
+Disease: Chikungunya
+Pathogen: Chikungunya Virus
+Epi Parameter: generation time
+Study: Guzzetta G, Vairo F, Mammone A, Lanini S, Poletti P, Manica M, Rosa R,
+Caputo B, Solimini A, della Torre A, Scognamiglio P, Zumla A, Ippolito
+G, Merler S (2020). "Spatial modes for transmission of chikungunya
+virus during a large chikungunya outbreak in Italy: a modeling
+analysis." _BMC Medicine_. doi:10.1186/s12916-020-01674-y
+&lt;https://doi.org/10.1186/s12916-020-01674-y&gt;.
+Distribution: gamma (days)
+Parameters:
+  shape: 8.633
+  scale: 1.447
+
+# ℹ Use `parameter_tbl()` to see a summary table of the parameters.
+# ℹ Explore database online at: https://epiverse-trace.github.io/epiparameter/articles/database.html</code></pre>
+</div>
+</div>
+<p>Na biblioteca de parâmetros epidemiológicos, pode ser que não tenhamos uma entrada de tempo de geração (<code>"generation"</code>) para a doença de interesse. Em vez disso, podemos consultar os intervalos seriais (<code>serial</code>) para COVID-19. Vamos descobrir o que precisamos considerar para isso!</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dados de revisão sistemática para patógenos prioritários
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>O <a href="https://mrc-ide.github.io/epireview/">pacote R <code>{epireview}</code></a> possui parâmetros sobre Ebola, Marburg, Lassa, SARS, Zika e Nipah a partir de revisões sistemáticas recentes, com mais patógenos prioritários planejados para versões futuras. Dê uma olhada <a href="https://epiverse-trace.github.io/epiparameter/articles/data_from_epireview.html">nesta vinheta</a> para obter mais informações sobre como usar esses parâmetros com o <code>{epiparameter}</code>.</p>
+</div>
+</div>
+</section>
+<section id="tempo-de-geração-vs.-intervalo-serial" class="level2">
+<h2 class="anchored" data-anchor-id="tempo-de-geração-vs.-intervalo-serial">Tempo de geração vs.&nbsp;intervalo serial</h2>
+<p>O tempo de geração, em conjunto com o <a href="../glossario.html#basic">número de reprodução</a> (<span class="math inline">\(R\)</span>), pode fornecer informações valiosas sobre a provável taxa de crescimento da epidemia e, portanto, orientar a implementação de medidas de controle. Quanto maior o valor de <span class="math inline">\(R\)</span> e/ou mais curto o tempo de geração, mais novas infecções esperaríamos por dia e, portanto, mais rápido a incidência de casos da doença crescerá.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/reproduction-generation-time.png" class="img-fluid figure-img"></p>
+<figcaption>Vídeo do MRC Centre for Global Infectious Disease Analysis, Ep 76. Science In Context - Epi Parameter Review Group com a Dra. Anne Cori (27-07-2023) em <a href="https://youtu.be/VvpYHhFDIjI?si=XiUyjmSV1gKNdrrL" class="uri">https://youtu.be/VvpYHhFDIjI?si=XiUyjmSV1gKNdrrL</a></figcaption>
+</figure>
+</div>
+<p>No cálculo do número de reprodução efetivo (<span class="math inline">\(R_{t}\)</span>), a distribuição do <em>tempo de geração</em> (isto é, o delay de uma infecção até a seguinte) é frequentemente aproximada pela distribuição do <a href="../glossario.html#serialinterval">intervalo serial</a> (isto é, o delay do início dos sintomas no infector até o início no infectado). Essa aproximação é frequentemente usada porque é mais fácil observar e registrar o início dos sintomas do que o momento exato da infecção.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="No Brasil: as datas que a vigilância registra">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>No Brasil: as datas que a vigilância registra
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Na rotina brasileira, o que se registra é a <strong>data de primeiros sintomas</strong> e a <strong>data de notificação/digitação</strong> — não a data exata da infecção, que só costuma ser conhecida em investigações específicas de surto. Para SRAG, o sistema oficial é o <strong>SIVEP-Gripe</strong>, cuja base é publicada de forma aberta (<a href="https://dadosabertos.saude.gov.br/dataset/srag-2019-a-2026">Portal de Dados Abertos do SUS — SIVEP-Gripe</a>).</p>
+<p>É essa lacuna entre os dois momentos que faz o intervalo serial ser usado como aproximação do tempo de geração.</p>
+</div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/serial-interval-observed.jpeg" class="img-fluid figure-img"></p>
+<figcaption>Um esquema da relação entre diferentes períodos de tempo de transmissão entre um infector e um infectado em um par de transmissão. A janela de exposição é definida como o intervalo de tempo com exposição viral, e a janela de transmissão é definida como o intervalo de tempo para transmissão subsequente em relação ao momento da infecção (<a href="https://academic.oup.com/jid/article/224/10/1664/6356465">Chung Lau et al., 2021</a>).</figcaption>
+</figure>
+</div>
+<p>No entanto, usar o <em>intervalo serial</em> como uma aproximação do <em>tempo de geração</em> é mais adequado para doenças em que a infecciosidade começa após o início dos sintomas (<a href="https://academic.oup.com/jid/article/224/10/1664/6356465">Chung Lau et al., 2021</a>). Nos casos em que a infecciosidade começa antes do início dos sintomas, os intervalos seriais podem assumir valores negativos, o que ocorre quando o infectado desenvolve sintomas antes do infector em um par de transmissão (<a href="https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2">Nishiura et al., 2020</a>).</p>
+<!-- Additionally, even if the *generation time* and *serial interval* have the same mean, their variance usually differs, propagating bias to the $R_{t}$ estimation ([Gostic et al., 2020](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008409)). -->
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Das médias de atraso às distribuições de probabilidade
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Se medirmos o <em>intervalo serial</em> em dados reais, normalmente vemos que nem todos os pares de casos têm o mesmo delay de início a início dos sintomas. Também podemos observar essa variabilidade para outros atrasos epidemiológicos fundamentais, incluindo o <a href="../glossario.html#incubation">período de incubação</a> e o <a href="../glossario.html#infectiousness">período de infecciosidade</a>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/serial-interval-pairs.jpg" class="img-fluid figure-img"></p>
+<figcaption>Intervalos seriais de possíveis pares de casos em (a) COVID-19 e (b) MERS-CoV. Os pares representam um infector presumido e seu infectado presumido, dispostos pela data de início dos sintomas (<a href="https://www.sciencedirect.com/science/article/pii/S2468042722000537#fig6">Althobaity et al., 2022</a>).</figcaption>
+</figure>
+</div>
+<p>Para resumir esses dados de indivíduos pareados (intervalos de tempo entre os momentos de início dos sintomas do infector e do infectado), é, portanto, útil quantificar a <strong>distribuição estatística</strong> de atrasos que melhor se ajusta aos dados, em vez de focar apenas na média (<a href="https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2023.28.27.2200806">McFarland et al., 2023</a>).</p>
+<!-- add a reference about good practices to estimate distributions -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/seria-interval-fitted-distributions.jpg" class="img-fluid figure-img"></p>
+<figcaption>Distribuição ajustada do intervalo serial para (a) COVID-19 e (b) MERS-CoV com base em pares de transmissão notificados na Arábia Saudita. Ajustamos três distribuições comumente usadas: distribuições Log-normal, Gamma e Weibull, respectivamente (<a href="https://www.sciencedirect.com/science/article/pii/S2468042722000537#fig5">Althobaity et al., 2022</a>).</figcaption>
+</figure>
+</div>
+<p>As distribuições estatísticas são sintetizadas em termos de suas <strong>estatísticas resumo</strong>, como a <em>posição</em> (média e percentis) e a <em>dispersão</em> (variância ou desvio padrão) da distribuição, ou com seus <strong>parâmetros da distribuição</strong>, que informam sobre a <em>forma</em> (shape e rate/scale) da distribuição. Esses valores estimados podem ser relatados com sua <strong>incerteza</strong> (intervalos de confiança de 95%).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Gamma</th>
+<th style="text-align: left;">mean</th>
+<th style="text-align: left;">shape</th>
+<th style="text-align: left;">rate/scale</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">MERS-CoV</td>
+<td style="text-align: left;">14.13(13.9–14.7)</td>
+<td style="text-align: left;">6.31(4.88–8.52)</td>
+<td style="text-align: left;">0.43(0.33–0.60)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">COVID-19</td>
+<td style="text-align: left;">5.1(5.0–5.5)</td>
+<td style="text-align: left;">2.77(2.09–3.88)</td>
+<td style="text-align: left;">0.53(0.38–0.76)</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Weibull</th>
+<th style="text-align: left;">mean</th>
+<th style="text-align: left;">shape</th>
+<th style="text-align: left;">rate/scale</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">MERS-CoV</td>
+<td style="text-align: left;">14.2(13.3–15.2)</td>
+<td style="text-align: left;">3.07(2.64–3.63)</td>
+<td style="text-align: left;">16.1(15.0–17.1)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">COVID-19</td>
+<td style="text-align: left;">5.2(4.6–5.9)</td>
+<td style="text-align: left;">1.74(1.46–2.11)</td>
+<td style="text-align: left;">5.83(5.08–6.67)</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Log normal</th>
+<th style="text-align: left;">mean</th>
+<th style="text-align: left;">mean-log</th>
+<th style="text-align: left;">sd-log</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">MERS-CoV</td>
+<td style="text-align: left;">14.08(13.1–15.2)</td>
+<td style="text-align: left;">2.58(2.50–2.68)</td>
+<td style="text-align: left;">0.44(0.39–0.5)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">COVID-19</td>
+<td style="text-align: left;">5.2(4.2–6.5)</td>
+<td style="text-align: left;">1.45(1.31–1.61)</td>
+<td style="text-align: left;">0.63(0.54–0.74)</td>
+</tr>
+</tbody>
+</table>
+<p>Tabela: Estimativas de intervalo serial usando distribuições Gama, Weibull e Log Normal. Os intervalos de confiança de 95% para os parâmetros <em>shape</em> e <em>scale</em> (<em>mean-log</em> e <em>sd-log</em>, no caso da Log Normal) estão entre parênteses (<a href="https://www.sciencedirect.com/science/article/pii/S2468042722000537#tbl3">Althobaity et al., 2022</a>).</p>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="intervalo-serial" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="intervalo-serial">Intervalo serial</h3>
+<p>Considerando o intervalo serial de ambas as infecções na figura abaixo:</p>
+<ul>
+<li>Qual delas teria um número maior de gerações em menos tempo?</li>
+<li>Por que você conclui isso?</li>
+</ul>
+<p>Assuma <!-- that COVID-19 and SARS have similar reproduction number values and --> que o intervalo serial aproxima o tempo de geração.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../img/serial-interval-covid-sars.jpg" class="img-fluid figure-img"></p>
+<figcaption>Intervalo serial das infecções por COVID-19 (SARS-CoV-2) sobreposto com uma distribuição publicada de SARS (SARS-CoV-1). (<a href="https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext">Nishiura et al., 2020</a>)</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>O pico de cada curva pode orientar você sobre a posição da média de cada distribuição. Uma média maior indica um delay esperado mais longo entre o início dos sintomas no infector e no infectado.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>Qual delas teria um número maior de gerações em menos tempo?</strong></p>
+<p>COVID-19</p>
+<p><strong>Por que você conclui isso?</strong></p>
+<p>Porque a COVID-19 tem um intervalo serial médio mais curto. O intervalo serial médio aproximado para a COVID-19 é de cerca de 4 dias, em comparação com aproximadamente 7 dias para a SARS. Portanto, se houver muitas infecções presentes na população, a COVID-19, em média, produzirá mais gerações de infecção em menos tempo do que a SARS. <!-- , assuming similar reproduction numbers. --> Um intervalo serial curto pode dificultar o rastreamento de contatos devido ao rápido surgimento de novas gerações de casos. Isso significa que seriam necessários muito mais recursos para acompanhar a epidemia.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>O objetivo da avaliação acima é avaliar a interpretação de um tempo de geração maior ou menor.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Checklist">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Checklist
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A distribuição do <em>tempo de geração</em> é o delay de uma infecção até a seguinte, frequentemente aproximada pelo <em>intervalo serial</em>, que é mais fácil de observar.</p>
+<p>Ela pode ser usada para estimar a transmissibilidade de uma doença calculando o número de reprodução efetivo (<span class="math inline">\(R_{t}\)</span>).</p>
+<p>Se quiser se familiarizar com a forma como essa distribuição é utilizada nesse cálculo, você pode ler o recurso complementar <a href="../notas/equacao-de-renovacao.html">Introdução à equação de renovação</a>.</p>
+</div>
+</div>
+</section>
+<section id="escolhendo-parâmetros-epidemiológicos" class="level2">
+<h2 class="anchored" data-anchor-id="escolhendo-parâmetros-epidemiológicos">Escolhendo parâmetros epidemiológicos</h2>
+<p>Nesta seção, usaremos o <code>{epiparameter}</code> para obter o intervalo serial para COVID-19, como uma alternativa ao tempo de geração.</p>
+<p>Primeiro, vamos ver quantos parâmetros temos na base de dados de distribuições epidemiológicas (<code>epiparameter_db()</code>) com <code>disease</code> chamado <code>covid</code>. Execute este código:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"covid"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A partir do pacote <code>{epiparameter}</code>, podemos usar a função <code>epiparameter_db()</code> para consultar qualquer doença (<code>disease</code>) e também uma distribuição epidemiológica específica (<code>epi_name</code>). Execute isto no seu console:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"COVID"</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial"</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Com essa combinação de consulta, obtemos mais de uma distribuição de atraso (porque a base de dados possui múltiplas entradas). Quando várias entradas coincidem, a saída é uma lista de objetos <code>&lt;epiparameter&gt;</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Insensível a maiúsculas e minúsculas (CASE-INSENSITIVE)
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>epiparameter_db</code> é <a href="https://dillionmegida.com/p/case-sensitivity-vs-case-insensitivity/#case-insensitivity">insensível a maiúsculas e minúsculas (<em>case-insensitive</em>)</a>. Isso significa que você pode usar strings com letras maiúsculas ou minúsculas de forma intercambiável. Strings como <code>"serial"</code>, <code>"serial interval"</code> ou <code>"serial_interval"</code> também são válidas.</p>
+</div>
+</div>
+<p>Como sugerido nas saídas, para resumir um objeto <code>&lt;epiparameter&gt;</code> e obter os nomes das colunas da base de dados de parâmetros subjacente, podemos adicionar a função <code>epiparameter::parameter_tbl()</code> ao código anterior usando o pipe <code>%&gt;%</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial"</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">parameter_tbl</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 4 results that match the criteria (3 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Parameter table:
+# A data frame:    4 × 7
+  disease  pathogen   epi_name        prob_distribution author  year sample_size
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;           &lt;chr&gt;             &lt;chr&gt;  &lt;dbl&gt;       &lt;dbl&gt;
+1 COVID-19 SARS-CoV-2 serial interval &lt;NA&gt;              Alene…  2021        3924
+2 COVID-19 SARS-CoV-2 serial interval lnorm             Nishi…  2020          28
+3 COVID-19 SARS-CoV-2 serial interval weibull           Nishi…  2020          18
+4 COVID-19 SARS-CoV-2 serial interval norm              Yang …  2020         131</code></pre>
+</div>
+</div>
+<p>Na saída de <code>epiparameter::parameter_tbl()</code>, também podemos encontrar diferentes tipos de distribuições de probabilidade (por exemplo, Log-normal, Weibull, Normal).</p>
+<p>O <code>{epiparameter}</code> usa a convenção de nomenclatura do R <code>base</code> para distribuições. É por isso que <strong>Log normal</strong> é chamada de <code>lnorm</code>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Detalhes">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Detalhes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="por-que-temos-uma-entrada-na" class="level3">
+<h3 class="anchored" data-anchor-id="por-que-temos-uma-entrada-na">Por que temos uma entrada ‘NA’?</h3>
+<p>Entradas com um valor ausente (<code>&lt;NA&gt;</code>) na coluna <code>prob_distribution</code> são entradas <em>não parametrizadas</em>. Elas possuem estatísticas resumo (por exemplo, média e desvio padrão), mas nenhuma distribuição de probabilidade especificada. Compare estas duas saídas:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obter um objeto &lt;epiparameter&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>distribution <span class="ot">&lt;-</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">epi_name =</span> <span class="st">"serial"</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>distribution <span class="sc">%&gt;%</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># extrair a primeira entrada no objeto de classe &lt;list&gt;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pluck</span>(<span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># verificar se o objeto &lt;epiparameter&gt; possui parâmetros de distribuição</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is_parameterised</span>()</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># verificar se o segundo objeto &lt;epiparameter&gt;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># possui parâmetros de distribuição</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>distribution <span class="sc">%&gt;%</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pluck</span>(<span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is_parameterised</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="entradas-parametrizadas-possuem-um-método-de-inferência" class="level3">
+<h3 class="anchored" data-anchor-id="entradas-parametrizadas-possuem-um-método-de-inferência">Entradas parametrizadas possuem um método de inferência</h3>
+<p>Conforme detalhado em <code>?is_parameterised</code>, uma distribuição parametrizada é a entrada que possui uma distribuição de probabilidade associada a ela fornecida por um <code>inference_method</code>, como mostrado em <code>metadata</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>distribution[[<span class="dv">1</span>]]<span class="sc">$</span>metadata<span class="sc">$</span>inference_method</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>distribution[[<span class="dv">2</span>]]<span class="sc">$</span>metadata<span class="sc">$</span>inference_method</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>distribution[[<span class="dv">4</span>]]<span class="sc">$</span>metadata<span class="sc">$</span>inference_method</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Execute os blocos acima para obter as saídas.</p>
+</section>
+</div>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="encontre-suas-distribuições-de-atraso" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="encontre-suas-distribuições-de-atraso">Encontre suas distribuições de atraso!</h3>
+<p>Reserve 2 minutos para explorar a biblioteca do <code>{epiparameter}</code>.</p>
+<p><strong>Escolha</strong> uma doença de interesse (por exemplo, influenza, sarampo, etc.) e uma distribuição de atraso (por exemplo, período de incubação, início dos sintomas até o óbito, etc.).</p>
+<p>Encontre:</p>
+<ul>
+<li><p>Quantas distribuições de atraso existem para essa doença?</p></li>
+<li><p>Quantos tipos de distribuição de probabilidade (por exemplo, gamma, log normal) existem para um determinado atraso nessa doença?</p></li>
+</ul>
+<p>Pergunte-se:</p>
+<ul>
+<li><p>Você reconhece os artigos?</p></li>
+<li><p>A revisão de literatura do <code>{epiparameter}</code> deveria considerar algum outro artigo?</p></li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>A função <code>epiparameter_db()</code> apenas com <code>disease</code> conta o número de entradas como:</p>
+<ul>
+<li>estudos e</li>
+<li>distribuições de atraso.</li>
+</ul>
+<p>A função <code>epiparameter_db()</code> com <code>disease</code> e <code>epi_name</code> obtém uma lista de todas as entradas com:</p>
+<ul>
+<li>a citação completa,</li>
+<li>o <strong>tipo</strong> de distribuição de probabilidade e</li>
+<li>os valores dos parâmetros da distribuição.</li>
+</ul>
+<p>A combinação de <code>epiparameter_db()</code> mais <code>parameter_tbl()</code> obtém um data frame de todas as entradas com colunas como:</p>
+<ul>
+<li>o <strong>tipo</strong> da distribuição de probabilidade por atraso e</li>
+<li>autor e ano do estudo.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-18-contents" aria-controls="callout-18" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-18" class="callout-18-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Optamos por explorar as distribuições de atraso do Ebola:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># esperamos 17 distribuições de atraso para o Ebola</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 17 results that match the criteria (17 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># List of 17 &lt;epiparameter&gt; objects
+Number of diseases: 1
+❯ Ebola Virus Disease
+Number of epi parameters: 9
+❯ hospitalisation to death ❯ hospitalisation to discharge ❯ incubation period ❯ notification to death ❯ notification to discharge ❯ offspring distribution ❯ onset to death ❯ onset to discharge ❯ serial interval
+[[1]]
+Disease: Ebola Virus Disease
+Pathogen: Ebola Virus
+Epi Parameter: offspring distribution
+Study: Lloyd-Smith J, Schreiber S, Kopp P, Getz W (2005). "Superspreading and
+the effect of individual variation on disease emergence." _Nature_.
+doi:10.1038/nature04153 &lt;https://doi.org/10.1038/nature04153&gt;.
+Distribution: nbinom (No units)
+Parameters:
+  mean: 1.500
+  dispersion: 5.100
+
+[[2]]
+Disease: Ebola Virus Disease
+Pathogen: Ebola Virus-Zaire Subtype
+Epi Parameter: incubation period
+Study: Eichner M, Dowell S, Firese N (2011). "Incubation period of ebola
+hemorrhagic virus subtype zaire." _Osong Public Health and Research
+Perspectives_. doi:10.1016/j.phrp.2011.04.001
+&lt;https://doi.org/10.1016/j.phrp.2011.04.001&gt;.
+Distribution: lnorm (days)
+Parameters:
+  meanlog: 2.487
+  sdlog: 0.330
+
+[[3]]
+Disease: Ebola Virus Disease
+Pathogen: Ebola Virus-Zaire Subtype
+Epi Parameter: onset to death
+Study: The Ebola Outbreak Epidemiology Team, Barry A, Ahuka-Mundeke S, Ali
+Ahmed Y, Allarangar Y, Anoko J, Archer B, Abedi A, Bagaria J, Belizaire
+M, Bhatia S, Bokenge T, Bruni E, Cori A, Dabire E, Diallo A, Diallo B,
+Donnelly C, Dorigatti I, Dorji T, Waeber A, Fall I, Ferguson N,
+FitzJohn R, Tengomo G, Formenty P, Forna A, Fortin A, Garske T,
+Gaythorpe K, Gurry C, Hamblion E, Djingarey M, Haskew C, Hugonnet S,
+Imai N, Impouma B, Kabongo G, Kalenga O, Kibangou E, Lee T, Lukoya C,
+Ly O, Makiala-Mandanda S, Mamba A, Mbala-Kingebeni P, Mboussou F,
+Mlanda T, Makuma V, Morgan O, Mulumba A, Kakoni P, Mukadi-Bamuleka D,
+Muyembe J, Bathé N, Ndumbi Ngamala P, Ngom R, Ngoy G, Nouvellet P, Nsio
+J, Ousman K, Peron E, Polonsky J, Ryan M, Touré A, Towner R, Tshapenda
+G, Van De Weerdt R, Van Kerkhove M, Wendland A, Yao N, Yoti Z, Yuma E,
+Kalambayi Kabamba G, Mwati J, Mbuy G, Lubula L, Mutombo A, Mavila O,
+Lay Y, Kitenge E (2018). "Outbreak of Ebola virus disease in the
+Democratic Republic of the Congo, April–May, 2018: an epidemiological
+study." _The Lancet_. doi:10.1016/S0140-6736(18)31387-4
+&lt;https://doi.org/10.1016/S0140-6736%2818%2931387-4&gt;.
+Distribution: gamma (days)
+Parameters:
+  shape: 2.400
+  scale: 3.333
+
+# ℹ 14 more elements
+# ℹ Use `print(n = ...)` to see more elements.
+# ℹ Use `parameter_tbl()` to see a summary table of the parameters.
+# ℹ Explore database online at: https://epiverse-trace.github.io/epiparameter/articles/database.html</code></pre>
+</div>
+</div>
+<p>Agora, a partir da saída de <code>epiparameter::epiparameter_db()</code>, o que é uma <a href="../glossario.html#offspringdist">distribuição de casos secundários</a>?</p>
+<p>Optamos por pesquisar estimativas do período de incubação para o Ebola. Esta saída lista todos os artigos e parâmetros encontrados. Execute isto localmente se necessário:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"incubation"</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Usamos <code>parameter_tbl()</code> para obter uma exibição resumida de tudo:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># esperamos 2 tipos diferentes de distribuições de atraso</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># para o período de incubação do ebola</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"incubation"</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">parameter_tbl</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 5 results that match the criteria (5 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Parameter table:
+# A data frame:    5 × 7
+  disease           pathogen epi_name prob_distribution author  year sample_size
+  &lt;chr&gt;             &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;             &lt;chr&gt;  &lt;dbl&gt;       &lt;dbl&gt;
+1 Ebola Virus Dise… Ebola V… incubat… lnorm             Eichn…  2011         196
+2 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015        1798
+3 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015          49
+4 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015         957
+5 Ebola Virus Dise… Ebola V… incubat… gamma             WHO E…  2015         792</code></pre>
+</div>
+</div>
+<p>Encontramos dois tipos de distribuições de probabilidade para essa consulta: <em>log normal</em> e <em>gamma</em>.</p>
+<p>Como o <code>{epiparameter}</code> realiza a coleta e a revisão da literatura revisada por pares? Convidamos você a ler a vinheta sobre <a href="https://epiverse-trace.github.io/epiparameter/articles/data_protocol.html">“Data Collation and Synthesis Protocol”</a>!</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</section>
+<section id="selecionar-uma-única-distribuição" class="level2">
+<h2 class="anchored" data-anchor-id="selecionar-uma-única-distribuição">Selecionar uma única distribuição</h2>
+<p>A função <code>epiparameter::epiparameter_db()</code> funciona como uma função de filtragem ou subconjunto. Podemos usar o argumento <code>author</code> para manter os parâmetros relatados em artigos onde o primeiro autor é <code>Nishiura</code>, ou o argumento <code>subset</code> para manter parâmetros de estudos com um tamanho amostral maior que 10:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial"</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">author =</span> <span class="st">"Nishiura"</span>,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subset =</span> sample_size <span class="sc">&gt;</span> <span class="dv">10</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">parameter_tbl</span>()</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Ainda obtemos mais de um parâmetro epidemiológico. Em vez disso, podemos definir o argumento <code>single_epiparameter</code> como <code>TRUE</code> para obter apenas um:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"serial"</span>,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using Nishiura H, Linton N, Akhmetzhanov A (2020). "Serial interval of novel
+coronavirus (COVID-19) infections." _International Journal of
+Infectious Diseases_. doi:10.1016/j.ijid.2020.02.060
+&lt;https://doi.org/10.1016/j.ijid.2020.02.060&gt;.. 
+To retrieve the citation use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Disease: COVID-19
+Pathogen: SARS-CoV-2
+Epi Parameter: serial interval
+Study: Nishiura H, Linton N, Akhmetzhanov A (2020). "Serial interval of novel
+coronavirus (COVID-19) infections." _International Journal of
+Infectious Diseases_. doi:10.1016/j.ijid.2020.02.060
+&lt;https://doi.org/10.1016/j.ijid.2020.02.060&gt;.
+Distribution: lnorm (days)
+Parameters:
+  meanlog: 1.386
+  sdlog: 0.568</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Como o ‘single_epiparameter’ funciona?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Consultando a documentação de ajuda em <code>?epiparameter::epiparameter_db()</code>:</p>
+<ul>
+<li>Se múltiplas entradas corresponderem aos argumentos fornecidos e <code>single_epiparameter = TRUE</code>, o <code>&lt;epiparameter&gt;</code> parametrizado com o <em>maior tamanho amostral</em> será retornado.</li>
+<li>Se múltiplas entradas forem iguais após essa ordenação, a <em>primeira entrada</em> da lista será retornada.</li>
+</ul>
+<p>O que é um <code>&lt;epiparameter&gt;</code> <em>parametrizado</em>? Veja <code>?is_parameterised</code>.</p>
+</div>
+</div>
+<p>Vamos atribuir esse objeto de classe <code>&lt;epiparameter&gt;</code> ao objeto <code>covid_serialint</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>covid_serialint <span class="ot">&lt;-</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">disease =</span> <span class="st">"covid"</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">epi_name =</span> <span class="st">"serial"</span>,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<!-- to activate for EpiNow2@dist-interfase
+
+But still, we need to extract them as usable numbers. We use `epiparameter::get_parameters()` for this:
+
+
+::: {.cell}
+
+```{.r .cell-code}
+covid_serialint_parameters <- epiparameter::get_parameters(covid_serialint)
+
+covid_serialint_parameters
+```
+
+::: {.cell-output .cell-output-stdout}
+
+```
+  meanlog     sdlog 
+1.3862617 0.5679803 
+```
+
+
+:::
+:::
+
+
+Isso devolve um vetor de classe `<numeric>`, útil como entrada para qualquer outro pacote! 
+
+::: {.callout-note}
+
+Se escrevermos `[]` logo depois do último objeto criado, como em `covid_serialint_parameters[]`, dentro de `[]` podemos usar a 
+tecla Tab <kbd>↹</kbd> 
+para acionar o [recurso de completar código](https://support.posit.co/hc/en-us/articles/205273297-Code-Completion-in-the-RStudio-IDE) e ter acesso rápido a `covid_serialint_parameters["meanlog"]` e `covid_serialint_parameters["sdlog"]`. Vale a pena testar!
+
+Isso só parece funcionar em blocos de código e no console do R!
+
+:::
+
+-->
+<p>Você pode usar <code>plot()</code> em objetos <code>&lt;epiparameter&gt;</code> para visualizar:</p>
+<ul>
+<li>a <em>Função Densidade de Probabilidade (PDF)</em> e</li>
+<li>a <em>Função de Distribuição Acumulada (CDF)</em>.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plotar o objeto &lt;epiparameter&gt;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(covid_serialint)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="01-acessar-atrasos_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Com o argumento <code>xlim</code>, você pode alterar o comprimento ou o número de dias no eixo <code>x</code>. Explore como isso se comporta:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plotar o objeto &lt;epiparameter&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(covid_serialint, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">60</span>))</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="extrair-as-estatísticas-resumo" class="level2">
+<h2 class="anchored" data-anchor-id="extrair-as-estatísticas-resumo">Extrair as estatísticas resumo</h2>
+<p>Podemos obter a média (<code>mean</code>) e o desvio padrão (<code>sd</code>) deste objeto <code>&lt;epiparameter&gt;</code> acessando o elemento <code>summary_stats</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obter a média</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>covid_serialint<span class="sc">$</span>summary_stats<span class="sc">$</span>mean</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 4.7</code></pre>
+</div>
+</div>
+<p>Agora, temos um parâmetro epidemiológico que podemos reutilizar! Dado que o <code>covid_serialint</code> é uma distribuição <code>lnorm</code> ou log-normal, podemos substituir os números das <strong>estatísticas resumo</strong> que inserimos na função <code>EpiNow2::LogNormal()</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>generation_time <span class="ot">&lt;-</span> </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  EpiNow2<span class="sc">::</span><span class="fu">LogNormal</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> covid_serialint<span class="sc">$</span>summary_stats<span class="sc">$</span>mean, <span class="co"># substituído!</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd =</span> covid_serialint<span class="sc">$</span>summary_stats<span class="sc">$</span>sd, <span class="co"># substituído!</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">max =</span> <span class="dv">20</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>No próximo episódio, aprenderemos como usar o <code>{EpiNow2}</code> para especificar distribuições corretamente e estimar a transmissibilidade. Também aprenderemos como usar <strong>funções de distribuição</strong> para obter um valor máximo (<code>max</code>) para <code>EpiNow2::LogNormal()</code> e usar o <code>{epiparameter}</code> em sua análise.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Distribuições log-normais
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Se você precisar dos <strong>parâmetros da distribuição</strong> log-normal em vez das estatísticas resumo, podemos usar <code>epiparameter::get_parameters()</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>covid_serialint_parameters <span class="ot">&lt;-</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">get_parameters</span>(covid_serialint)</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>covid_serialint_parameters</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  meanlog     sdlog 
+1.3862617 0.5679803 </code></pre>
+</div>
+</div>
+<p>Isso retorna um vetor de classe <code>&lt;numeric&gt;</code> pronto para ser usado como entrada para qualquer outro pacote!</p>
+<p>Considere que as funções do <code>{EpiNow2}</code> também aceitam parâmetros de distribuição como entradas. Execute <code>?EpiNow2::LogNormal</code> para ler o manual de referência de <a href="https://epiforecasts.io/EpiNow2/reference/Distributions.html">Distribuições de probabilidade</a>.</p>
+</div>
+</div>
+</section>
+<section id="desafios" class="level2">
+<h2 class="anchored" data-anchor-id="desafios">Desafios</h2>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="intervalo-serial-do-ebola" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="intervalo-serial-do-ebola">Intervalo serial do Ebola</h3>
+<p>Reserve 1 minuto para:</p>
+<p>Obter acesso ao intervalo serial do Ebola com o maior tamanho amostral.</p>
+<p>Responda:</p>
+<ul>
+<li><p>Qual é o <code>sd</code> da distribuição epidemiológica?</p></li>
+<li><p>Qual é o <code>sample_size</code> usado nesse estudo?</p></li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-22-contents" aria-controls="callout-22" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-22" class="callout-22-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Use o operador <code>$</code> mais a tecla do teclado <kbd>tab</kbd> ou <kbd>↹</kbd> para explorá-los como uma lista expansível:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>ebola_serial<span class="sc">$</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Use <code>str()</code> para exibir a estrutura do objeto R <code>&lt;epiparameter&gt;</code>.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-24-contents" aria-controls="callout-24" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-24" class="callout-24-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># intervalo serial do ebola</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>ebola_serial <span class="ot">&lt;-</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  epiparameter<span class="sc">::</span><span class="fu">epiparameter_db</span>(</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">epi_name =</span> <span class="st">"serial"</span>,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">single_epiparameter =</span> <span class="cn">TRUE</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using WHO Ebola Response Team, Agua-Agum J, Ariyarajah A, Aylward B, Blake I,
+Brennan R, Cori A, Donnelly C, Dorigatti I, Dye C, Eckmanns T, Ferguson
+N, Formenty P, Fraser C, Garcia E, Garske T, Hinsley W, Holmes D,
+Hugonnet S, Iyengar S, Jombart T, Krishnan R, Meijers S, Mills H,
+Mohamed Y, Nedjati-Gilani G, Newton E, Nouvellet P, Pelletier L,
+Perkins D, Riley S, Sagrado M, Schnitzler J, Schumacher D, Shah A, Van
+Kerkhove M, Varsaneux O, Kannangarage N (2015). "West African Ebola
+Epidemic after One Year — Slowing but Not Yet under Control." _The New
+England Journal of Medicine_. doi:10.1056/NEJMc1414992
+&lt;https://doi.org/10.1056/NEJMc1414992&gt;.. 
+To retrieve the citation use the 'get_citation' function</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>ebola_serial</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Disease: Ebola Virus Disease
+Pathogen: Ebola Virus
+Epi Parameter: serial interval
+Study: WHO Ebola Response Team, Agua-Agum J, Ariyarajah A, Aylward B, Blake I,
+Brennan R, Cori A, Donnelly C, Dorigatti I, Dye C, Eckmanns T, Ferguson
+N, Formenty P, Fraser C, Garcia E, Garske T, Hinsley W, Holmes D,
+Hugonnet S, Iyengar S, Jombart T, Krishnan R, Meijers S, Mills H,
+Mohamed Y, Nedjati-Gilani G, Newton E, Nouvellet P, Pelletier L,
+Perkins D, Riley S, Sagrado M, Schnitzler J, Schumacher D, Shah A, Van
+Kerkhove M, Varsaneux O, Kannangarage N (2015). "West African Ebola
+Epidemic after One Year — Slowing but Not Yet under Control." _The New
+England Journal of Medicine_. doi:10.1056/NEJMc1414992
+&lt;https://doi.org/10.1056/NEJMc1414992&gt;.
+Distribution: gamma (days)
+Parameters:
+  shape: 2.188
+  scale: 6.490</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obter o sd</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>ebola_serial<span class="sc">$</span>summary_stats<span class="sc">$</span>sd</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 9.6</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obter o sample_size</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>ebola_serial<span class="sc">$</span>metadata<span class="sc">$</span>sample_size</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 305</code></pre>
+</div>
+</div>
+<p>Tente visualizar essa distribuição usando <code>plot()</code>.</p>
+<p>Além disso, explore todos os outros elementos aninhados dentro do objeto <code>&lt;epiparameter&gt;</code>.</p>
+<p>Compartilhe:</p>
+<ul>
+<li>Quais elementos você considera úteis para sua análise?</li>
+<li>Que outros elementos você gostaria de ver nesse objeto? De que forma?</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-25-contents" aria-controls="callout-25" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-25" class="callout-25-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Um elemento interessante é a entrada aninhada <code>method_assess</code>, que se refere aos métodos utilizados pelos autores do estudo para avaliar vieses ao estimar a distribuição do intervalo serial.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>covid_serialint<span class="sc">$</span>method_assess</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$censored
+[1] TRUE
+
+$right_truncated
+[1] TRUE
+
+$phase_bias_adjusted
+[1] FALSE</code></pre>
+</div>
+</div>
+<p>Exploraremos esses conceitos nos próximos episódios!</p>
+</div>
+</div>
+</div>
+<div class="desafio callout callout-style-default callout-tip callout-titled" title="Desafio">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Dica</span>Desafio
+</div>
+</div>
+<section id="parâmetro-de-gravidade-do-ebola" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="parâmetro-de-gravidade-do-ebola">Parâmetro de gravidade do Ebola</h3>
+<p>Um parâmetro de gravidade como a duração da internação pode somar-se às informações necessárias sobre a capacidade de leitos em resposta a um surto (<a href="https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371">Cori et al., 2017</a>).</p>
+<div class="callout callout-style-default callout-note callout-titled" title="No Brasil: tempo de permanência e desfecho">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>No Brasil: tempo de permanência e desfecho
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>O tempo entre a internação e o desfecho alimenta diretamente o planejamento de leitos. No Brasil, casos e óbitos por SRAG estão no <strong>SIVEP-Gripe</strong> e as internações em geral no <strong>SIH/DATASUS</strong>, ambos com bases publicadas abertamente no <a href="https://dadosabertos.saude.gov.br/">Portal de Dados Abertos do SUS</a>.</p>
+</div>
+</div>
+<!-- Also, `{EpiNow2}` can also include the uncertainty around each summary statistic, like the standard deviation of the standard deviation. -->
+<p>Para o Ebola:</p>
+<ul>
+<li>Qual é a <em>estimativa pontual</em> relatada da duração média do atendimento de saúde e isolamento de casos?</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled" title="Dica">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-27-contents" aria-controls="callout-27" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dica
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-27" class="callout-27-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Um atraso informativo deve medir o tempo desde o início dos sintomas até a recuperação ou o óbito.</p>
+<p>Encontre uma maneira de acessar toda a base de dados do <code>{epiparameter}</code> e descubra como esse delay pode estar armazenado. A saída de <code>parameter_tbl()</code> é um data frame.</p>
+</div>
+</div>
+</div>
+<div class="solucao callout callout-style-default callout-note callout-titled" title="Solução">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Solução
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># uma forma de obter a lista de todos os parâmetros disponíveis</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">epiparameter_db</span>(<span class="at">disease =</span> <span class="st">"all"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">parameter_tbl</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(epi_name)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 125 results that match the criteria (100 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 13 × 1
+   epi_name                    
+   &lt;chr&gt;                       
+ 1 incubation period           
+ 2 serial interval             
+ 3 generation time             
+ 4 onset to death              
+ 5 offspring distribution      
+ 6 hospitalisation to death    
+ 7 hospitalisation to discharge
+ 8 notification to death       
+ 9 notification to discharge   
+10 onset to discharge          
+11 onset to hospitalisation    
+12 onset to ventilation        
+13 case fatality risk          </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>ebola_severity <span class="ot">&lt;-</span> <span class="fu">epiparameter_db</span>(</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"ebola"</span>,</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">epi_name =</span> <span class="st">"onset to discharge"</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Returning 1 results that match the criteria (1 are parameterised). 
+Use subset to filter by entry variables or single_epiparameter to return a single entry. 
+To retrieve the citation for each use the 'get_citation' function</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimativa pontual</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>ebola_severity<span class="sc">$</span>summary_stats<span class="sc">$</span>mean</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 15.1</code></pre>
+</div>
+</div>
+<p>Verifique que, para algumas entradas do <code>{epiparameter}</code>, você também terá a <em>incerteza</em> em torno da <em>estimativa pontual</em> de cada estatística resumo:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># intervalos de confiança de 95%</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>ebola_severity<span class="sc">$</span>summary_stats<span class="sc">$</span>mean_ci</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 95</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># limites dos intervalos de confiança</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>ebola_severity<span class="sc">$</span>summary_stats<span class="sc">$</span>mean_ci_limits</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 14.6 15.6</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discussão">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Discussão
+</div>
+</div>
+<section id="o-zoológico-de-distribuições" class="level3 callout-body-container callout-body">
+<h3 class="anchored" data-anchor-id="o-zoológico-de-distribuições">O zoológico de distribuições</h3>
+<p>Explore este aplicativo shiny chamado <strong>The Distribution Zoo</strong>!</p>
+<p>Siga estes passos para reproduzir a forma da distribuição do intervalo serial de COVID do <code>{epiparameter}</code> (objeto <code>covid_serialint</code>):</p>
+<ol type="1">
+<li>Acesse o site do aplicativo shiny <a href="https://ben18785.shinyapps.io/distribution-zoo/" class="uri">https://ben18785.shinyapps.io/distribution-zoo/</a>,</li>
+<li>Vá para o painel esquerdo,</li>
+<li>Mantenha a opção <em>Category of distribution</em>: <code>Continuous Univariate</code>,</li>
+<li>Selecione um novo <em>Type of distribution</em>: <code>Log-Normal</code>,</li>
+<li>Mova os <strong>sliders</strong> (controles deslizantes), ou seja, o elemento de controle gráfico que permite ajustar um valor movendo uma alça ao longo de uma barra ou trilha horizontal, para os parâmetros de <code>covid_serialint</code>.</li>
+</ol>
+<p>Replique isso com o objeto <code>distribution</code> e todos os elementos de sua lista: <code>[[2]]</code>, <code>[[3]]</code> e <code>[[4]]</code>. Explore como a forma de uma distribuição muda quando seus parâmetros são alterados.</p>
+<p>Compartilhe:</p>
+<ul>
+<li>Que outros recursos do site você considera úteis?</li>
+</ul>
+</section>
+</div>
+<div class="callout callout-style-default callout-important callout-titled" title="Para o instrutor">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-31-contents" aria-controls="callout-31" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Para o instrutor
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-31" class="callout-31-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>No contexto de interfaces de usuário e interfaces gráficas de usuário (GUIs), como o aplicativo shiny <a href="https://ben18785.shinyapps.io/distribution-zoo/">Distribution Zoo</a>, um <strong>slider</strong> (controle deslizante) é um elemento de controle gráfico que permite aos usuários ajustar um valor movendo uma alça ao longo de uma trilha ou barra. Conceitualmente, ele fornece uma maneira de selecionar um valor numérico dentro de um intervalo especificado, deslizando ou arrastando visualmente um ponteiro (a alça) ao longo de um eixo contínuo.</p>
+</div>
+</div>
+</div>
+<!--
+## Concept map
+
+update it from last epiparameter test 
+-->
+<div class="callout callout-style-default callout-note callout-titled" title="Pontos-chave">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Pontos-chave
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Use o <code>{epiparameter}</code> para acessar o catálogo da literatura de distribuições de atraso epidemiológicas.</li>
+<li>Use <code>epiparameter_db()</code> para selecionar distribuições de atraso individuais.</li>
+<li>Use <code>parameter_tbl()</code> para obter uma visão geral de múltiplas distribuições de atraso.</li>
+<li>Reutilize estimativas conhecidas para uma doença desconhecida no estágio inicial de um surto, quando não há dados de rastreamento de contatos disponíveis.</li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiada");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiada");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../setup.html" class="pagination-link" aria-label="Configuração">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Configuração</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../episodios/02-quantificar-transmissibilidade.html" class="pagination-link" aria-label="Quantificar a transmissibilidade">
+        <span class="nav-page-text"><span class="chapter-title">Quantificar a transmissibilidade</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Baseado em Epiverse-TRACE <em>Tutorials Middle</em> (CC-BY 4.0)</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/MVMLima/tutorials-middle-pt/edit/main/episodios/01-acessar-atrasos.qmd" class="toc-action"><i class="bi bi-github"></i>Editar essa página</a></li><li><a href="https://github.com/MVMLima/tutorials-middle-pt/issues/new" class="toc-action"><i class="bi empty"></i>Criar uma issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Adaptação PT-BR: Marcos V. M. de Lima</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
