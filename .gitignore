@@ -1,0 +1,22 @@
+# saída do build
+_site/
+.quarto/
+
+# biblioteca R local do projeto (não versionar)
+.Rlib/
+.Rhistory
+.RData
+.Rproj.user/
+
+# pasta de trabalho da tradução (fontes EN, prompts e logs dos agentes)
+_work/
+
+# sistema
+.DS_Store
+
+/.quarto/
+**/*.quarto_ipynb
+
+# efeito colateral do render do episodio 6 (grafo interativo + captura de tela)
+network.html
+webshot.png

@@ -1,0 +1,417 @@
+---
+title: Configuração
+---
+
+## Motivação
+
+**Surtos** de doenças infecciosas podem surgir como resultado de diferentes patógenos e em diferentes contextos, mas normalmente levam a questões de saúde pública semelhantes, desde a compreensão dos padrões de transmissão e gravidade até a análise do efeito das medidas de controle ([Cori et al. 2017](https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371#d1e605)). Podemos relacionar cada uma dessas questões de saúde pública a uma série de tarefas de análise de dados de surtos. Quanto mais eficiente e confiavelmente realizarmos essas tarefas, mais rápido e com maior precisão poderemos responder às perguntas fundamentais.
+
+O Epiverse-TRACE tem como objetivo fornecer um ecossistema de software para [**análise de surtos**](glossario.qmd#outbreakanalytics) com ferramentas integradas, generalizáveis e escaláveis, desenvolvidas pela comunidade. Apoiamos o desenvolvimento de novos pacotes R, ajudamos a conectar ferramentas existentes para torná-las mais fáceis de usar e contribuímos para uma comunidade de prática que abrange epidemiologistas de campo, cientistas de dados, pesquisadores de laboratório, analistas de agências de saúde, engenheiros de software e muito mais.
+
+### Tutoriais do Epiverse-TRACE
+
+Nossos tutoriais são estruturados em torno de um pipeline de análise de surtos dividido em três etapas: **tarefas iniciais (Early tasks)**, **tarefas intermediárias (Middle tasks)** e **tarefas avançadas (Late tasks)**. Os resultados das tarefas concluídas nas etapas anteriores normalmente alimentam as tarefas necessárias para as etapas posteriores.
+
+![Visão geral dos tópicos dos tutoriais](https://epiverse-trace.github.io/task_pipeline-minimal.svg)
+
+Cada tarefa possui seu próprio site de tutoriais, e cada site de tutorial consiste em um conjunto de episódios cobrindo diferentes tópicos.
+
+| [Tutoriais de tarefas iniciais ➠](https://epiverse-trace.github.io/tutorials-early/) | [Tutoriais de tarefas intermediárias ➠](https://epiverse-trace.github.io/tutorials-middle) | [Tutoriais de tarefas avançadas ➠](https://epiverse-trace.github.io/tutorials-late/) |
+|---|---|---|
+| Ler e limpar dados de casos, e criar linelists | Análise em tempo real e previsão | Modelagem de cenários |
+| Ler, limpar e validar dados de casos, converter dados de linelist em incidência para visualização. | Acessar distribuições de atraso e estimar métricas de transmissão, prever casos, estimar gravidade e superspreading. | Simular a propagação de doenças e investigar intervenções. |
+
+Cada episódio contém:
+
++ **Visão geral**: descreve quais perguntas serão respondidas e os objetivos do episódio.
++ **Pré-requisitos**: descreve quais episódios/pacotes idealmente precisam ser concluídos antes do episódio atual.
++ **Código R de exemplo**: código R de exemplo para que você possa acompanhar os episódios no seu próprio computador.
++ **Desafios**: desafios que podem ser realizados para testar seu entendimento.
++ **Explicações**: quadros para aprofundar seu entendimento de conceitos matemáticos e de modelagem.
+
+Consulte também o [glossário](glossario.qmd) para quaisquer termos com os quais você talvez não esteja familiarizado.
+
+### Pacotes R do Epiverse-TRACE
+
+Nossa estratégia é incorporar gradualmente **pacotes R** especializados em um pipeline de análise tradicional. Esses pacotes devem preencher as lacunas nessas tarefas específicas da epidemiologia em resposta a surtos.
+
+![No **R**, a unidade fundamental de código compartilhável é o **pacote**. Um pacote reúne código, dados, documentação e testes, sendo fácil de compartilhar com outras pessoas ([Wickham e Bryan, 2023](https://r-pkgs.org/introduction.html))](img/pkgs-hexlogos-2.png)
+
+::: {.callout-important title="Pré-requisitos"}
+
+Este conteúdo pressupõe conhecimento intermediário de R. Estes tutoriais são para você se:
+
+- Você consegue importar dados no R, transformar e remodelar dados, e produzir uma ampla variedade de gráficos
+- Você está familiarizado com funções do `{dplyr}`, `{tidyr}` e `{ggplot2}`
+- Você sabe usar o pipe do magrittr `%>%` e/ou o pipe nativo `|>`.
+
+Esperamos que os participantes tenham algum contato com conceitos básicos de Estatística, Matemática e teoria de epidemias, mas NÃO familiaridade intermediária ou avançada com modelagem.
+
+:::
+
+## Instalação de softwares
+
+Siga estas duas etapas:
+
+### 1. Instalar ou atualizar o R e o Positron (ou RStudio, se preferir)
+
+O R e o Positron são dois softwares distintos:
+
+* O **R** é uma linguagem de programação e um software usado para executar códigos escritos em R.
+* O **Positron** é um ambiente de desenvolvimento integrado (IDE) que facilita o uso do R. Recomendamos usar o Positron para interagir com o R.
+
+Para instalar o R e o Positron (ou RStudio), siga estas instruções <https://posit.co/download/rstudio-desktop/>.
+
+::: {.callout-note}
+
+### Já está instalado?
+
+Espere um pouco: este é um ótimo momento para garantir que sua instalação do R esteja atualizada.
+
+Este tutorial requer o **R versão 4.0.0 ou posterior**.
+
+:::
+
+Para verificar se a sua versão do R está atualizada:
+
+- No Positron, a versão do R será exibida na [janela do console](https://docs.posit.co/ide/user/ide/guide/code/console.html). Ou execute `sessionInfo()` nela.
+
+- **Para atualizar o R**, baixe e instale a versão mais recente do [site do projeto R](https://cran.rstudio.com/) para o seu sistema operacional.
+
+  - Após instalar uma nova versão, você terá que reinstalar todos os seus pacotes na nova versão.
+
+  - No Windows, o pacote `{installr}` pode atualizar sua versão do R e migrar sua biblioteca de pacotes.
+
+- **Para atualizar o RStudio**, abra o RStudio e clique em
+`Help > Check for Updates`. Se uma nova versão estiver disponível, siga as
+instruções na tela.
+
+::: {.callout-note}
+
+### Verifique atualizações regularmente
+
+Embora isso possa parecer intimidador, é **muito mais comum** ter problemas devido ao uso de versões desatualizadas do R ou de pacotes R. Manter-se atualizado com as versões mais recentes do R, do Positron e de quaisquer pacotes que você utiliza regularmente é uma boa prática.
+
+:::
+
+### 2. Verificar e instalar ferramentas de compilação (Build Tools)
+
+Alguns pacotes exigem um conjunto complementar de ferramentas para serem compilados.
+Abra o Positron e **copie e cole** o seguinte bloco de código na 
+[janela do console](https://docs.posit.co/ide/user/ide/guide/code/console.html),
+depois pressione <kbd>Enter</kbd> (Windows e Linux) ou <kbd>Return</kbd> (macOS) para executar o comando:
+
+```r
+if(!require("pkgbuild")) install.packages("pkgbuild")
+pkgbuild::check_build_tools(debug = TRUE)
+```
+
+Esperamos uma mensagem como a apresentada abaixo:
+
+```output
+Your system is ready to build packages!
+```
+
+Se as ferramentas de compilação não estiverem disponíveis, isso acionará uma instalação automatizada.
+
+1. Execute o comando no console.
+2. Não interrompa o processo — espere até que o R exiba a mensagem de confirmação.
+3. Quando terminar, reinicie sua sessão do R (ou apenas reinicie o Positron) para garantir que as alterações tenham efeito.
+
+Se a instalação automática **não** funcionar, você poderá instalá-las manualmente de acordo com seu sistema operacional.
+
+::: {.panel-tabset}
+
+## Windows
+
+Usuários de Windows precisarão de uma instalação funcional do `Rtools` para compilar o pacote a partir do código-fonte.  
+O `Rtools` não é um pacote R, mas sim um software que você precisa baixar e instalar.
+Sugerimos que você siga estes passos:
+
+- **Instale o `Rtools`**. Baixe o instalador do `Rtools` em <https://cran.r-project.org/bin/windows/Rtools/>. Instale com as opções padrão.
+- Feche e reabra o Positron para que ele reconheça a nova instalação.
+
+## Mac
+
+Usuários de Mac precisam de duas etapas adicionais, conforme detalhado neste [guia para Configurar a C Toolchain no Mac](https://github.com/stan-dev/rstan/wiki/Configuring-C---Toolchain-for-Mac):
+
+- Instalar e usar o [`macrtools`](https://mac.thecoatlessprofessor.com/macrtools/) para configurar a toolchain de C++
+- Habilitar algumas otimizações de compilador.
+
+## Linux
+
+Usuários de Linux precisam de detalhes específicos por distribuição. Consulte-os neste [guia para Configurar a C Toolchain no Linux](https://github.com/stan-dev/rstan/wiki/Configuring-C-Toolchain-for-Linux).
+
+:::
+
+::: {.callout-note}
+
+### Verificação do ambiente
+
+Esta etapa requer privilégios de administrador para instalar softwares.
+
+Se você não tiver direitos de administrador em seu ambiente atual:  
+
+- Tente executar o tutorial em sua **máquina pessoal**, onde você tem acesso total.  
+- Use um **ambiente de desenvolvimento pré-configurado** (por exemplo, [Posit Cloud](https://posit.cloud/)).  
+- Peça ao seu **administrador de sistemas** que instale o software necessário para você.  
+
+:::
+
+::: {.callout-note title="Linux: uma dependência de sistema que não aparece na lista"}
+
+O pacote `{epicontacts}`, usado no episódio sobre superspreading, depende de uma biblioteca de
+sistema que não é instalada junto com o R: a **`libglpk`**. Sem ela, `library(epicontacts)` falha
+com uma mensagem parecida com `libglpk.so.40: cannot open shared object file`.
+
+No Ubuntu ou Debian, instale antes de seguir:
+
+```bash
+sudo apt install libglpk40
+```
+
+:::
+
+### 3. Instalar os pacotes R necessários
+
+<!--
+During the tutorial, we will need a number of R packages. Packages contain useful R code written by other people. We will use packages from the [Epiverse-TRACE](https://epiverse-trace.github.io/).
+-->
+
+Abra o Positron e **copie e cole** o seguinte bloco de código na [janela do console](https://docs.posit.co/ide/user/ide/guide/code/console.html), depois pressione <kbd>Enter</kbd> (Windows e Linux) ou <kbd>Return</kbd> (macOS) para executar o comando (se desejar usar o espelho brasileiro do CRAN para acelerar downloads, execute antes: `options(repos = c(CRAN = "https://cran-r.c3sl.ufpr.br/"))`):
+
+```r
+# para os episódios sobre acessar atrasos e quantificar a transmissão
+
+if(!require("pak")) install.packages("pak")
+
+new_packages <- c(
+  "EpiNow2",
+  "epiparameter",
+  "incidence2",
+  "tidyverse"
+)
+
+pak::pkg_install(new_packages)
+```
+
+```r
+# para os episódios sobre previsão e gravidade
+
+if(!require("pak")) install.packages("pak")
+
+new_packages <- c(
+  "EpiNow2",
+  "cfr",
+  "epiparameter",
+  "incidence2",
+  "outbreaks",
+  "tidyverse"
+)
+
+pak::pkg_install(new_packages)
+```
+
+```r
+# para os episódios sobre superspreading e cadeias de transmissão
+
+if(!require("pak")) install.packages("pak")
+
+new_packages <- c(
+  "epicontacts",
+  "fitdistrplus",
+  "superspreading",
+  "epichains",
+  "epiparameter",
+  "incidence2",
+  "outbreaks",
+  "tidyverse"
+)
+
+pak::pkg_install(new_packages)
+```
+
+Estas etapas de instalação podem perguntar `? Do you want to continue (Y/n)`; digite `Y` e pressione <kbd>Enter</kbd>.
+
+::: {.callout-note title="Detalhes" collapse="true"}
+
+### Você recebeu um erro com o pak?
+
+Tente usar a função clássica para instalar um pacote individual; por exemplo, para instalar `{cfr}`, execute:
+
+```r
+install.packages("cfr")
+```
+
+:::
+
+::: {.callout-note title="Detalhes" collapse="true"}
+
+### Você precisa de um Personal Access Token (PAT) do GitHub?
+
+Se a mensagem de erro incluir uma expressão como `Personal access token (PAT)`, você pode precisar [configurar seu token do GitHub](https://epiverse-trace.github.io/git-rstudio-basics/02-setup.html#set-up-your-github-token).
+
+Primeiro, instale estes pacotes R:
+
+```r
+if(!require("pak")) install.packages("pak")
+
+new <- c("gh",
+         "gitcreds",
+         "usethis")
+
+pak::pak(new)
+```
+
+Depois, siga estas três etapas para [configurar seu token do GitHub (leia este guia passo a passo)](https://epiverse-trace.github.io/git-rstudio-basics/02-setup.html#set-up-your-github-token):
+
+```r
+# Gerar um token
+usethis::create_github_token()
+
+# Configurar seu token 
+gitcreds::gitcreds_set()
+
+# Obter um relatório da situação
+usethis::git_sitrep()
+```
+
+Tente instalar o {epiparameter} novamente:
+
+```r
+if(!require("remotes")) install.packages("remotes")
+remotes::install_github("epiverse-trace/epiparameter")
+```
+
+Se o erro persistir, [entre em contato conosco](#your-questions)!
+
+:::
+
+Você deve atualizar **todos os pacotes** necessários para o tutorial, mesmo que os tenha instalado relativamente recentemente. Novas versões trazem melhorias e correções de bugs importantes.
+
+### 4. Verificar a instalação
+
+Quando a instalação terminar, você pode tentar carregar os pacotes colando o seguinte código no console:
+
+```r
+# para os episódios sobre acessar atrasos e quantificar a transmissão
+
+library(EpiNow2)
+library(epiparameter)
+library(incidence2)
+library(tidyverse)
+```
+
+```r
+# para os episódios sobre previsão e gravidade
+
+library(EpiNow2)
+library(cfr)
+library(epiparameter)
+library(incidence2)
+library(outbreaks)
+library(tidyverse)
+```
+
+```r
+# para os episódios sobre superspreading e cadeias de transmissão
+
+library(epicontacts)
+library(fitdistrplus)
+library(superspreading)
+library(epichains)
+library(epiparameter)
+library(incidence2)
+library(outbreaks)
+library(tidyverse)
+```
+
+Se você NÃO vir um erro como `there is no package called ‘...’`, está tudo pronto! Se vir, [entre em contato conosco](#your-questions)!
+
+### 5. Assistir e ler o material pré-curso
+
+::: {.callout-important title="Pré-requisitos"}
+
+<!--
+One paper introduction to Outbreak analytics:
+
+- Polonsky JA, Baidjoe A, Kamvar ZN, Cori A, Durski K, Edmunds WJ, Eggo RM, 
+Funk S, Kaiser L, Keating P, de Waroux OLP, Marks M, Moraga P, Morgan O, 
+Nouvellet P, Ratnayake R, Roberts CH, Whitworth J, Jombart T. 
+**Outbreak analytics: a developing data science for informing the response to emerging pathogens.** 
+Philos Trans R Soc Lond B Biol Sci. 2019 Jul 8;374(1776):20180276. 
+doi: 10.1098/rstb.2018.0276. PMID: 31104603; PMCID: PMC6558557.
+-->
+
+**Assista** a três revisões em vídeo de 5 minutos sobre distribuições estatísticas:
+
+- StatQuest com Josh Starmer (2017) 
+**The Main Ideas behind Probability Distributions**, YouTube. 
+Disponível em: <https://www.youtube.com/watch?v=oI3hZJqXJuc&t> 
+<!--(Accessed: 30 October 2024).-->
+
+<!--
+- StatQuest with Josh Starmer (2015)
+**Confidence Intervals, Clearly Explained!!!**, YouTube.
+Available at: <https://www.youtube.com/watch?v=TqOeMYtOc1w>
+(Accessed: 04 November 2024).
+-->
+
+- StatQuest com Josh Starmer (2018) 
+**Probability is not Likelihood. Find out why!!!**, YouTube. 
+Disponível em: <https://www.youtube.com/watch?v=pYxNSUDSFH4> 
+<!--(Accessed: 30 October 2024).-->
+
+- StatQuest com Josh Starmer (2017) 
+**Maximum Likelihood, clearly explained!!!**, YouTube. 
+Disponível em: <https://www.youtube.com/watch?v=XepXtl9YKwc>
+<!--(Accessed: 30 October 2024).-->
+
+<!--
+- Weiss, J. (2012) 
+**R probability functions for the normal distribution**, 
+Lecture 13-Monday, October 8, 2012. 
+Available at: <https://sakai.unc.edu/access/content/group/3d1eb92e-7848-4f55-90c3-7c72a54e7e43/public/docs/lectures/lecture13.htm#probfunc>
+(Accessed: 30 October 2024). 
+-->
+
+<!--
+**Read** a two-page paper introduction to Infectious Disease Modelling:
+
+- Bjørnstad ON, Shea K, Krzywinski M, Altman N. 
+**Modeling infectious epidemics.** 
+Nat Methods. 2020 May;17(5):455-456. 
+doi: 10.1038/s41592-020-0822-z. PMID: 32313223.
+<https://www.nature.com/articles/s41592-020-0822-z>
+-->
+
+<!--
+- Bjørnstad ON, Shea K, Krzywinski M, Altman N. 
+**The SEIRS model for infectious disease dynamics.** 
+Nat Methods. 2020 Jun;17(6):557-558. doi: 10.1038/s41592-020-0856-2.
+<https://www.nature.com/articles/s41592-020-0856-2>
+Erratum in: Nat Methods. 2021 Mar;18(3):321. PMID: 32499633.
+
+- McVernon, J. et al. (2016) 
+**A user’s Guide to Infectious Disease Modelling**, Prism. 
+Available at: http://prism.edu.au/publications/prism-modeling-guideline/ 
+(Accessed: 14 March 2024).
+-->
+
+:::
+
+## Conjuntos de dados
+
+### Baixar os dados
+
+Faremos o download dos dados diretamente a partir do R durante o tutorial. No entanto, se você prevê problemas com a conexão de rede, pode ser melhor baixar os dados previamente e armazená-los em sua máquina.
+
+Os arquivos de dados para o tutorial podem ser baixados manualmente aqui:
+
+- <data/ebola_cases.csv>
+
+- <data/sarscov2_cases_deaths.csv>
+
+## Suas dúvidas {#your-questions}
+
+Se precisar de ajuda para instalar os softwares ou tiver qualquer outra dúvida sobre este tutorial, envie um e-mail para <andree.valle-campos@lshtm.ac.uk>

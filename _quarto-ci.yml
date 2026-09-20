@@ -1,0 +1,10 @@
+# Perfil usado APENAS no GitHub Actions (quarto render --profile ci).
+#
+# `freeze: true` faz o build reaproveitar os resultados já calculados em `_freeze/`
+# mesmo quando um .qmd muda. Sem isso, editar só o TEXTO de uma lição faria o CI
+# tentar executar o código R — e o runner do GitHub não tem R nem os pacotes.
+#
+# Consequência: se você mudar CÓDIGO R, rode `quarto render` na sua máquina e
+# commite o `_freeze/` junto; o CI sozinho não executa código.
+execute:
+  freeze: true

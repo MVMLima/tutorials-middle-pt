@@ -1,0 +1,102 @@
+---
+title: "Análise em tempo real e previsão para surtos com R"
+author: "Marcos V M Lima"
+---
+
+## Sobre este material
+
+Este é o curso **Análise em tempo real e previsão para surtos com R**, uma adaptação para o
+português brasileiro do tutorial *Epiverse-TRACE Tutorials Middle: Real-time analysis and
+forecasting for outbreak analytics with R*.
+
+O material original foi produzido pela iniciativa [Epiverse-TRACE](https://epiverse-trace.github.io/)
+e é publicado sob licença CC-BY 4.0. Aqui ele foi traduzido, reorganizado no formato de livro
+digital ([Quarto](https://quarto.org/)) e adaptado ao contexto brasileiro de vigilância em saúde —
+com notas de ligação com a rotina do SINAN, do SIVEP-Gripe e dos serviços de vigilância.
+
+## O que você vai aprender
+
+Esta é a segunda etapa do fluxo de análise de dados de um surto. Aqui os dados de casos já estão
+limpos e validados; o que se faz agora é **transformá-los em estimativas de transmissão, previsão
+e gravidade**, levando em conta os atrasos entre infecção, notificação e desfecho.
+
+- **[Acessar distribuições de atraso](episodios/01-acessar-atrasos.qmd)** — buscar tempos de
+  geração, períodos de incubação e intervalos seriais já estimados na literatura, com o
+  `{epiparameter}`, em vez de copiar números de artigos à mão.
+- **[Quantificar a transmissibilidade](episodios/02-quantificar-transmissibilidade.qmd)** — estimar
+  o número de reprodução efetivo ($R_t$) e a taxa de crescimento a partir dos casos notificados,
+  com o `{EpiNow2}` e inferência bayesiana em Stan.
+- **[Usar distribuições de atraso na análise](episodios/03-funcoes-de-atraso.qmd)** — combinar,
+  discretizar e comparar distribuições fixas e variáveis antes de alimentar o modelo.
+- **[Criar uma previsão de curto prazo](episodios/04-criar-previsoes.qmd)** — prever casos e óbitos,
+  modelar a subnotificação e escolher o horizonte de previsão.
+- **[Estimar a gravidade de um surto](episodios/05-severidade-estatica.qmd)** — risco de letalidade
+  (CFR) bruto e corrigido pelo atraso entre caso e óbito, com o pacote `{cfr}`.
+- **[Levar em conta o superspreading](episodios/06-superspreading-estimar.qmd)** — estimar a
+  distribuição de casos secundários a partir de dados de contato e avaliar o risco de aglomerados.
+- **[Simular cadeias de transmissão](episodios/07-superspreading-simular.qmd)** — usar o
+  `{epichains}` para simular o potencial de surtos grandes e de extinção.
+
+Cada episódio traz objetivos, pré-requisitos, código de exemplo, desafios com solução comentada e
+caixas de explicação dos conceitos de modelagem.
+
+## Para quem é
+
+- Epidemiologistas de campo que já usam R e precisam estimar $R_t$, gravidade ou fazer previsão.
+- Analistas de vigilância que acompanham surtos em tempo real e sofrem com atraso de notificação.
+- Estudantes de pós-graduação e professores que precisam de material pronto para oficina.
+
+As personas de aprendiz que orientaram o desenho do curso estão descritas em
+[Para quem são estes tutoriais](perfis.qmd).
+
+## Pré-requisitos
+
+Você precisa de **R intermediário**:
+
+- ler dados no R, transformar, reorganizar e produzir gráficos variados;
+- estar familiarizado com as funções de `{dplyr}`, `{tidyr}` e `{ggplot2}`;
+- usar o pipe do `{magrittr}` (`%>%`) ou o pipe nativo (`|>`).
+
+E de **teoria de epidemias em nível básico**: parâmetros epidemiológicos, períodos de tempo da
+doença (incubação, tempo de geração, intervalo serial) e [história natural da
+infecção](glossario.qmd#naturalhistory). **Não** é preciso familiaridade intermediária ou avançada
+com modelagem.
+
+O curso também supõe que você já fez a primeira etapa do fluxo — ler, limpar e validar os dados de
+casos, produzindo um *linelist* —, que é o conteúdo do tutorial
+[*Epiverse-TRACE Tutorials Early*](https://epiverse-trace.github.io/tutorials-early/).
+
+## Por onde começar
+
+1. Faça a **[preparação do ambiente](setup.qmd)** (instalação de R, das ferramentas de compilação
+   e dos pacotes). Reserve tempo para isso: o `{EpiNow2}` depende do Stan e é onde a maior parte
+   dos problemas aparece.
+2. Vá para o **[episódio 1](episodios/01-acessar-atrasos.qmd)** e siga na ordem. Cada episódio
+   supõe que os anteriores já foram feitos.
+3. Use o **[glossário](glossario.qmd)** sempre que aparecer um termo novo.
+
+::: {.callout-warning title="Tempo de execução"}
+
+Os episódios que rodam `EpiNow2::epinow()` fazem inferência bayesiana por MCMC e podem levar
+**vários minutos** cada. O próprio material avisa: em alguns trechos a recomendação é seguir lendo
+o episódio enquanto o modelo roda em segundo plano. Não é erro nem travamento.
+
+:::
+
+::: {.callout-note title="Usando em oficinas"}
+
+A página **[Notas para quem conduz a oficina](instrutor.qmd)** traz os tempos sugeridos por
+episódio, o que demonstrar e o que deixar para os participantes fazerem. Os arquivos de dados
+usados no curso ficam na pasta [`data/`](data/) deste site e podem ser baixados antes, caso a rede
+da sala falhe.
+
+:::
+
+## Créditos
+
+- **Material original:** Valle-Campos A, Minter A, Degoot A, Gruson H, Bah B, Eggo R, Funk S,
+  Kucharski A (2026). *Epiverse-TRACE Tutorials Middle: Real-time analysis and forecasting for
+  outbreak analytics with R.* DOI:
+  [10.5281/zenodo.21512003](https://doi.org/10.5281/zenodo.21512003)
+- **Adaptação PT-BR:** Marcos V. M. de Lima.
+- **Licença:** CC-BY 4.0, a mesma do original. Detalhes em [Licença e créditos](licenca.qmd).

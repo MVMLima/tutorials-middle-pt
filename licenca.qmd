@@ -1,0 +1,72 @@
+# Licença e créditos
+
+## Material original
+
+Este curso é uma **adaptação** do tutorial:
+
+> Valle-Campos A, Minter A, Degoot A, Gruson H, Bah B, Eggo R, Funk S, Kucharski A (2026).
+> *Epiverse-TRACE Tutorials Middle: Real-time analysis and forecasting for outbreak analytics
+> with R.* DOI: [10.5281/zenodo.21512003](https://doi.org/10.5281/zenodo.21512003).
+> Versão v2026-07-23. <https://epiverse-trace.github.io/tutorials-middle/>
+
+O material original é desenvolvido pela iniciativa [Epiverse-TRACE](https://epiverse-trace.github.io/)
+e foi construído sobre o modelo de lição do [The Carpentries
+Workbench](https://carpentries.github.io/workbench/) (modelo publicado sob licença CC BY).
+
+## Licença
+
+O conteúdo instrucional original é publicado sob a licença
+[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+Esta adaptação é publicada sob **a mesma licença CC BY 4.0**, que permite copiar, redistribuir,
+adaptar e usar o material para qualquer finalidade, inclusive comercial, desde que o crédito seja
+dado ao material original, seja indicado o link da licença e seja informado se houve alterações.
+
+**Como citar esta adaptação:**
+
+> Lima MVM (2026). *Análise em tempo real e previsão para surtos com R: atrasos, número de
+> reprodução, previsão, gravidade e superspreading.* Adaptação em português brasileiro de
+> Epiverse-TRACE Tutorials Middle. <https://github.com/MVMLima/tutorials-middle-pt>
+
+## O que foi alterado nesta adaptação
+
+- Tradução integral para o português brasileiro.
+- Reorganização do formato de lição (Carpentries Workbench) para livro digital em
+  [Quarto](https://quarto.org/).
+- Os pacotes, as funções, os nomes de colunas e os conjuntos de dados de exemplo permaneceram
+  **exatamente** como no original, para que o código continue funcionando sem alterações.
+- Inclusão de caixas de contexto brasileiro, escritas para esta adaptação, ligando o conteúdo à
+  rotina de vigilância (SINAN, SIVEP-Gripe, DATASUS) e às bases públicas do Ministério da Saúde.
+- Inclusão do guia para quem conduz a oficina e da tradução do glossário.
+- Reordenação alfabética das entradas do glossário conforme a ordem do português.
+
+## Ressalvas e defeitos do material original
+
+Registrado aqui para que ninguém perca tempo procurando erro de tradução onde há outra causa:
+
+- **Bloco comentado que voltou a aparecer.** No episódio 1, o material original traz um trecho
+  desativado (marcado como `to activate for EpiNow2@dist-interfase`) que define o objeto
+  `covid_serialint_parameters`. A conversão de formato deixou esse trecho visível. Ele não muda o
+  resultado do episódio — o objeto é redefinido mais adiante, em um trecho ativo. Optamos por
+  manter o conteúdo visível, como no material original publicado.
+- **Versão do `{EpiNow2}`.** O curso foi escrito para a interface anterior à versão 1.9.0 do
+  pacote. Verificamos em 20/09/2026 que, com a versão 1.9.0:
+  - `EpiNow2::estimate_delay()`, usado no episódio 2, está **deprecado** e emite um aviso na saída
+    (a substituição indicada pelo pacote é `estimate_dist()`); a função continua funcionando;
+  - o extrator `epinow()$estimates`, que aparece em exemplos de outros tutoriais, está **extinto**.
+    O código deste curso **não** o utiliza: aqui se usa `summary(epinow())` e `plot(epinow())`, que
+    continuam funcionando.
+
+  O código foi mantido idêntico ao original de propósito, para que a adaptação envelheça junto com
+  o material de referência.
+- **Dependência de sistema do `{epicontacts}`.** No Linux, o pacote exige a biblioteca de sistema
+  `libglpk` (`libglpk.so.40`). Sem ela, `library(epicontacts)` falha e o episódio 6 não roda. Isso
+  não está na lista de instalação do material original; registramos o passo na página de Setup e
+  nas notas do instrutor.
+- **Inconsistência de redação no episódio 1.** O texto pergunta pela duração média de "health care
+  and case isolation", mas o código consulta o desfecho `onset to discharge`. Traduzimos o texto
+  como está e mantivemos a consulta como está.
+
+## Avaliação, conserto e sugestões
+
+Se você encontrar erro de tradução, link quebrado ou explicação confusa, abra uma *issue* no
+repositório: <https://github.com/MVMLima/tutorials-middle-pt/issues>

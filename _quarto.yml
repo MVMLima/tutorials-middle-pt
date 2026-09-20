@@ -1,0 +1,65 @@
+project:
+  type: book
+  output-dir: _site
+  execute-dir: project
+  resources:
+    - data
+
+book:
+  title: "Análise em tempo real e previsão para surtos com R"
+  subtitle: "Atrasos, número de reprodução, previsão, gravidade e superspreading"
+  author: |
+    Adaptação para o português: Marcos V. M. de Lima<br>
+    Material original: Epiverse-TRACE (CC-BY 4.0)
+  date: "2026-09-20"
+  chapters:
+    - index.qmd
+    - setup.qmd
+    - episodios/01-acessar-atrasos.qmd
+    - episodios/02-quantificar-transmissibilidade.qmd
+    - episodios/03-funcoes-de-atraso.qmd
+    - episodios/04-criar-previsoes.qmd
+    - episodios/05-severidade-estatica.qmd
+    - episodios/06-superspreading-estimar.qmd
+    - episodios/07-superspreading-simular.qmd
+  appendices:
+    - notas/equacao-de-renovacao.qmd
+    - notas/ajuste-cfr-atrasos.qmd
+    - perfis.qmd
+    - glossario.qmd
+    - instrutor.qmd
+    - licenca.qmd
+  repo-url: https://github.com/MVMLima/tutorials-middle-pt
+  repo-actions: [edit, issue]
+  search: true
+  sharing: [twitter, linkedin]
+  page-footer:
+    left: "Baseado em Epiverse-TRACE *Tutorials Middle* (CC-BY 4.0)"
+    right: "Adaptação PT-BR: Marcos V. M. de Lima"
+  sidebar:
+    style: docked
+    search: true
+  favicon: img/pkgs-hexlogos.png
+
+format:
+  html:
+    lang: pt-BR
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    toc-title: "Nesta página"
+    number-sections: false
+    code-copy: true
+    code-overflow: wrap
+    code-summary: "Código"
+    code-line-numbers: false
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    link-external-newwindow: true
+    highlight-style: github
+
+execute:
+  freeze: auto
+  error: true
+  warning: true

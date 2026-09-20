@@ -1,0 +1,47 @@
+/* Ajustes visuais do site PT-BR — Análise de dados de surto com R */
+
+/* ---- callouts usados na lição ---- */
+
+/* Desafio (exercício para o participante) */
+div.callout.callout-tip.desafio {
+  border-left-color: #2c6e9b;
+  background-color: #eef5fa;
+}
+div.callout.callout-tip.desafio > .callout-header {
+  background-color: rgba(44, 110, 155, 0.12);
+  color: #1d4e6e;
+  font-weight: 600;
+}
+
+/* Solução (resposta do desafio) */
+div.callout.callout-note.solucao {
+  border-left-color: #4a7c3f;
+  background-color: #f1f7ee;
+}
+div.callout.callout-note.solucao > .callout-header {
+  background-color: rgba(74, 124, 63, 0.12);
+  color: #33582b;
+  font-weight: 600;
+}
+
+/* ---- detalhes gerais ---- */
+
+div.callout > .callout-header {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+div.callout > .callout-body-container > .callout-body > p:last-child,
+div.callout > .callout-body-container > .callout-body > ul:last-child {
+  margin-bottom: 0.35rem;
+}
+
+/* blocos de código um pouco menores para caberem em projeção */
+pre.sourceCode {
+  font-size: 0.875em;
+}
+
+/* nome do pacote nos títulos de seção fica mais legível com leve espaçamento */
+h2 code, h3 code {
+  font-weight: 600;
+}

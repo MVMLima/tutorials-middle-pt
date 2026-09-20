@@ -1,0 +1,18 @@
+---
+title: "Para quem são estes tutoriais"
+---
+
+## Para quem são estes tutoriais
+
+Ao desenhar o conteúdo desta capacitação, pensamos em Lucia, Patricia e Vania como personas de
+aprendiz:
+
+- [Lucia](https://epiverse-trace.github.io/personas/lucia-outbreaks.html), epidemiologista de campo
+  em uma agência nacional de saúde, que usa R para limpeza de dados, gráficos e relatórios
+  automatizados.
+
+- [Patricia](https://epiverse-trace.github.io/personas/patricia-discoverer.html), estudante de
+  doutorado aprendendo a usar R e a analisar dados de surto no seu projeto de pesquisa.
+
+- [Vania](https://epiverse-trace.github.io/personas/vania-academica.html), professora que precisa de
+  material didático pronto para usar na sua pesquisa e repassar aos estudantes.

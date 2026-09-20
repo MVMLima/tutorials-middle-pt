@@ -1,0 +1,169 @@
+---
+title: "Notas para quem conduz a oficina"
+---
+
+Este guia é para quem vai **ministrar** a oficina. Ele não substitui os episódios: traz os tempos,
+o que demonstrar e o que deixar para os participantes fazerem, e onde as turmas costumam travar.
+
+## Tempos sugeridos
+
+Os tempos de ensino e de exercícios vêm do próprio material original (cabeçalho de cada episódio):
+
+| Episódio | Ensino | Exercícios | Total |
+|---|---|---|---|
+| 1. Acessar distribuições de atraso | 20 min | 10 min | 30 min |
+| 2. Quantificar a transmissibilidade | 30 min | 0 min | 30 min |
+| 3. Usar distribuições de atraso na análise | 20 min | 10 min | 30 min |
+| 4. Criar uma previsão de curto prazo | 30 min | 30 min | 60 min |
+| 5. Estimar a gravidade de um surto | 10 min | 2 min | 12 min |
+| 6. Levar em conta o superspreading | 30 min | 2 min | 32 min |
+| 7. Simular cadeias de transmissão | 30 min | 2 min | 32 min |
+| **Total** | **170 min** | **56 min** | **3h46** |
+
+As duas notas teóricas que fecham o site somam mais 40 minutos (15 de ensino e 5 de exercício cada).
+
+::: {.callout-warning title="O relógio da oficina não é o relógio do modelo"}
+
+Os episódios 2, 3 e 4 rodam `EpiNow2::epinow()`, que faz inferência bayesiana por MCMC. O material
+avisa em dois pontos: um ajuste "pode levar 10 minutos" e, com `samples = 1000` e `chains = 2`, "em
+torno de 3 minutos". Esses tempos **não estão contados na tabela acima** — eles correm em paralelo
+enquanto você segue explicando.
+
+Por isso, o desenho da oficina é: dispare o modelo, deixe rodando e continue lendo o episódio. Não
+pare a turma para esperar. Se a turma estiver em máquinas lentas, considere usar o material já
+renderizado (este site) para a parte de transmissibilidade e reservar o tempo de máquina para os
+episódios 5 a 7, que são rápidos.
+
+:::
+
+## Pré-requisitos dos participantes
+
+- R intermediário: ler dados, transformar, reorganizar e fazer gráficos.
+- Familiaridade com `{dplyr}`, `{tidyr}` e `{ggplot2}`, e uso do pipe (`%>%` ou `|>`).
+- Teoria de epidemias em nível básico: parâmetros epidemiológicos e períodos de tempo da doença
+  (incubação, tempo de geração, intervalo serial).
+- A primeira etapa da trilha já feita: ler, limpar e validar dados de casos, produzindo um
+  *linelist* (é o conteúdo do *Tutorials Early*).
+
+## Antes da oficina: checklist de preparação
+
+1. **Mande a página de [Setup](../setup.qmd) com antecedência** e peça que todos instalem R, as
+   ferramentas de compilação e os pacotes **em casa**. O `{EpiNow2}` depende do Stan e compila
+   modelos na instalação: é o passo mais demorado e o que mais falha em sala.
+2. **Teste o ajuste do modelo uma vez antes.** Rode um `epinow()` na sua máquina com os mesmos
+   argumentos do episódio 2 e confirme que termina. Se travar aí, travará na frente da turma.
+3. **Confirme que os pacotes carregam**: `library(EpiNow2)`, `library(epiparameter)`,
+   `library(incidence2)`, `library(cfr)`, `library(epicontacts)`, `library(epichains)`.
+4. **No Linux, instale a biblioteca de sistema do `{epicontacts}`.** O pacote depende da
+   `libglpk`; sem ela, `library(epicontacts)` falha com `libglpk.so.40: cannot open shared object
+   file` e o episódio 6 não roda. No Ubuntu/Debian: `sudo apt install libglpk40`. Hábito bom:
+   conferir isso em todas as máquinas antes de começar.
+5. **Projetor**: os blocos de código ficam pequenos em telas grandes (o material tem trechos
+   longos de `EpiNow2::epinow()`). Aumente o zoom do editor e do console antes de começar.
+6. **Combine a pasta de trabalho.** O curso usa caminhos relativos à raiz do projeto
+   (`file.path("data", ...)`, `here::here("data", ...)`). Peça que todos criem a mesma estrutura,
+   com a pasta `data/` na raiz, e baixem os dois arquivos CSV usados nos episódios 3 e 4/5.
+
+## Como conduzir cada episódio
+
+### 1. Acessar distribuições de atraso
+
+O que demonstrar: `epiparameter_db()` buscando por doença e por tipo de parâmetro, e a diferença
+entre uma entrada parametrizada e uma que só tem estatísticas resumo. Vale mostrar na projeção que
+o pacote devolve a **citação do estudo** junto com o parâmetro — é o argumento mais forte contra
+copiar número de artigo à mão.
+
+O que deixar para os participantes fazerem: o desafio do período de incubação do sarampo, em que
+eles precisam decidir entre `EpiNow2::LogNormal()` e `EpiNow2::Gamma()` a partir do que o
+`{epiparameter}` devolve.
+
+### 2. Quantificar a transmissibilidade
+
+É o episódio mais longo e o mais pesado computacionalmente. A sequência é: montar os dados de
+incidência com `{incidence2}`, definir as distribuições de atraso, disparar `epinow()` e ler a
+saída.
+
+O que demonstrar: os três tipos de estimativa no gráfico (`Estimate`, `Estimate based on partial
+data`, `Forecast`) e por que a parte laranja tem incerteza maior. É o conceito central do episódio.
+
+O que deixar para os participantes fazerem: interpretar o resumo (`summary(estimates)`) e responder
+o desafio sobre qual parâmetro delimita a extensão da trajetória com dados parciais.
+
+Ponto de atenção: **dispare o modelo cedo**. O próprio material diz para seguir lendo enquanto ele
+roda. Se você deixar para o fim, a oficina trava.
+
+### 3. Usar distribuições de atraso na análise
+
+Aqui o assunto é a mecânica: combinar distribuições com `+`, comparar atrasos fixos e variáveis,
+discretizar e entender o efeito de um atraso errado na estimativa de $R_t$.
+
+O que demonstrar: a comparação entre duas execuções de `epinow()` com distribuições diferentes e o
+gráfico de PMF/CDF. Duas execuções significam dois tempos de MCMC — avise a turma.
+
+### 4. Criar uma previsão de curto prazo
+
+O episódio mais denso em decisões de modelagem: modelo de observação, fator de escala para
+subnotificação e horizonte de previsão.
+
+O que demonstrar: `obs_opts(scale = ...)` e o que muda na quantidade estimada de casos por data de
+infecção quando se assume que só 40% dos casos são reportados. É a passagem que mais surpreende a
+turma.
+
+O que deixar para os participantes fazerem: o desafio com os dados de Ebola, que junta tudo —
+`{epiparameter}` para os parâmetros, `epinow()` para o ajuste e leitura do resultado.
+
+### 5. Estimar a gravidade de um surto
+
+Episódio curto e rápido (não usa Stan): dá para conduzir inteiro com a turma acompanhando.
+
+O foco é entender *por que* o CFR bruto engana no meio do surto. O gráfico do CFR ao longo do tempo
+— começando alto, caindo e depois se estabilizando — é a melhor peça do episódio. Vale ligar com a
+nota teórica [Como ajustar o CFR pelo atraso](../notas/ajuste-cfr-atrasos.qmd).
+
+### 6. Levar em conta o superspreading
+
+Aqui entram dados de contato e transmissão em cadeias. É o episódio com mais conceitos novos
+(distribuição de casos secundários, dispersão, aglomerados, rastreamento retrospectivo).
+
+O que demonstrar: `epicontacts::get_degree()` com `only_linelist = TRUE` e `FALSE` — a diferença
+entre os dois é o que revela que uma parte da transmissão não aparece nos dados de linha de lista.
+
+Ponto de atenção: este episódio tem um bloco que gera uma visualização interativa da rede em HTML
+e a captura como imagem. Ele depende de ferramentas auxiliares e é o trecho mais frágil
+tecnicamente. Se falhar na sua máquina, siga em frente: `plot(epi_contacts)` já mostra a rede.
+
+### 7. Simular cadeias de transmissão
+
+Fecha o curso ligando tudo: a distribuição de casos secundários estimada no episódio anterior
+alimenta a simulação de cadeias com `{epichains}`. O ponto conceitual é que a **superdispersão
+muda a probabilidade de extinção** — e portanto muda a estratégia de resposta.
+
+O que deixar para os participantes fazerem: variar o parâmetro de dispersão e comparar as
+probabilidades de surto grande e de contenção.
+
+## Onde as turmas costumam travar
+
+- **Instalação do `{EpiNow2}`.** É o gargalo número um. Compila Stan na instalação e falha com
+  frequência quando faltam ferramentas de compilação. Resolva antes, não na sala.
+- **Biblioteca de sistema do `{epicontacts}`** (Linux). Ver item 4 do checklist.
+- **Caminhos de arquivo.** O código usa caminhos relativos à raiz do projeto. Rodar sem estar no
+  projeto certo dá `No such file or directory` na leitura dos CSV.
+- **Achar que o modelo travou.** `epinow()` fica minutos sem imprimir nada além do log do Stan.
+  Ensine a turma a reconhecer a saída do MCMC e a esperar.
+- **Versão do pacote.** O curso foi escrito para uma versão do `{EpiNow2}` anterior à 1.9.0, que
+  traz mudanças de API (veja a página de [Licença e créditos](../licenca.qmd)). Se alguém trouxer
+  código de outros tutoriais, pode encontrar funções deprecadas.
+- **Dados próprios.** Se os participantes usarem dados do serviço deles, os nomes de coluna mudam
+  e o código precisa de ajuste. Isso é esperado: aproveite para discutir padronização de nomes.
+
+## Adaptando para os seus dados
+
+O curso é construído sobre dados de exemplo de COVID-19, Ebola e MERS, todos vindos de pacotes do
+R. A forma de trazer a realidade local para a oficina é montar o mesmo formato de entrada a partir
+das suas bases: uma tabela de casos agregados com as colunas `date` e `confirm` para o `{EpiNow2}`
+e `date`, `cases` e `deaths` para o `{cfr}`.
+
+Antes de usar uma base real, verifique a política de uso dos dados no seu serviço e trabalhe,
+sempre que possível, com **dados agregados ou anonimizados**. Dados de saúde são dados pessoais
+sensíveis e o compartilhamento em sala de aula precisa seguir a LGPD e as regras da sua
+instituição.

@@ -1,0 +1,172 @@
+---
+title: 'Glossário de termos: Epiverse-TRACE'
+---
+
+## A
+
+[Análise de surtos]{#outbreakanalytics}
+: Um campo especializado dentro da ciência de dados que se concentra nos aspectos tecnológicos e metodológicos do pipeline de dados de surtos. Isso inclui a coleta sistemática, análise, modelagem e comunicação de dados para orientar a resposta a surtos ([Polonsky et al., 2019](https://royalsocietypublishing.org/doi/full/10.1098/rstb.2018.0276)).
+
+[Atraso de notificação]{#reportingdelay}
+: Atraso ou defasagem entre o momento em que um evento ocorre (por exemplo, início dos sintomas) e o momento em que é notificado ([Lawless, 1994](https://www.jstor.org/stable/3315820)). Podemos quantificá-lo comparando a linelist com versões sucessivas dela mesma ou com contagens agregadas de casos notificados atualizadas ([Cori et al. 2017](https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371)).
+
+<!-- ## B -->
+
+## C
+
+[C++]{#cplusplus}
+: C++ é uma linguagem de programação de alto nível que pode ser usada dentro do R para acelerar partes do código. Para saber mais sobre C++, consulte estes [tutoriais](https://cplusplus.com/doc/tutorial/) e saiba mais sobre a integração entre C++ e R [aqui](https://www.rcpp.org/).
+
+[Censura]{#censoring}
+: 
+Significa que sabemos que um evento aconteceu, mas não sabemos exatamente quando aconteceu. A maioria dos dados epidemiológicos é “duplamente censurada” porque há incerteza em torno dos momentos tanto do evento primário quanto do secundário. Não levar em conta a censura pode levar a estimativas enviesadas do desvio padrão do atraso ([Park et al., em andamento](https://github.com/parksw3/epidist-paper)).
+Diferentes abordagens de amostragem podem gerar vieses devido à censura à esquerda e à direita na estimativa do intervalo serial, o que pode propagar viés para a estimativa do [período de incubação](#incubation) e do tempo de geração ([Chen et al., 2022](https://www.nature.com/articles/s41467-022-35496-8/figures/2)).
+
+[Condições iniciais]{#initial}
+: Em [EDOs](#ordinary), as condições iniciais são os valores das variáveis de estado no início da simulação do modelo (no tempo 0). Por exemplo, se houver um indivíduo infeccioso em uma população de 1000 pessoas em um modelo Suscetível-Infectado-Recuperado, as condições iniciais seriam $S(0) = 999$, $I(0) = 1$, $R(0) = 0$.  
+
+## D
+
+[Distribuição de atraso]{#delaydist}
+: Distribuição de probabilidade de um período de tempo epidemiológico fundamental ([Althobait et al., 2022, Figuras 5 e 6](https://www.sciencedirect.com/science/article/pii/S2468042722000537#fig5)). Para um resumo completo dos principais períodos epidemiológicos, consulte [Xiang et al., 2021](https://www.sciencedirect.com/science/article/pii/S2468042721000038/#fig4). Os [tutoriais de tarefas intermediárias](https://epiverse-trace.github.io/tutorials-middle/delays-access.html) contêm episódios sobre este tópico.
+
+[Distribuição de casos secundários]{#offspringdist}
+: Distribuição do número de casos secundários causados por um indivíduo infectado específico. ([Lloyd-Smith et al., 2005](https://www.nature.com/articles/nature04153), [Endo et al., 2020](https://wellcomeopenresearch.org/articles/5-67/v3)).
+
+## E
+
+[Eliminação viral]{#viralshedding}
+: O processo de liberação de um vírus de uma célula ou do corpo para o ambiente, onde ele pode infectar outras pessoas. ([Cambridge Dictionary, 2023](https://dictionary.cambridge.org/us/dictionary/english/shedding)).
+
+[Equações diferenciais ordinárias]{#ordinary}
+: Equações diferenciais ordinárias (EDOs) podem ser usadas para representar a taxa de variação de uma variável (por exemplo, número de indivíduos infectados) em relação a outra (por exemplo, tempo). Confira esta introdução às [EDOs](https://mathinsight.org/ordinary_differential_equation_introduction). As EDOs são amplamente utilizadas na modelagem de doenças infecciosas para modelar o fluxo de indivíduos entre diferentes estados da doença. 
+
+<!-- ## F -->
+
+<!-- ## G -->
+
+## H
+
+[História natural da doença]{#naturalhistory} 
+: Refere-se à evolução da doença do início ao fim sem qualquer tratamento ou intervenção. De fato, dada a nocividade de uma epidemia, medidas de tratamento ou intervenção são inevitáveis. Portanto, é difícil que a história natural de uma doença não seja afetada pelos diversos fatores intervenientes. ([Xiang et al., 2021](https://www.sciencedirect.com/science/article/pii/S2468042721000038)).
+
+## I
+
+[Inferência bayesiana]{#bayesian}
+: Um tipo de inferência estatística em que crenças a priori são atualizadas com o uso de dados observados. 
+[Mais informações sobre inferência bayesiana](https://en.wikipedia.org/wiki/Bayesian_inference).  
+
+[Intervenções não farmacológicas]{#NPIs}
+: Intervenções não farmacológicas (NPIs) são medidas implementadas para reduzir a transmissão que não incluem a administração de medicamentos ou vacinas. [Mais informações sobre NPIs](https://www.gov.uk/government/publications/technical-report-on-the-covid-19-pandemic-in-the-uk/chapter-8-non-pharmaceutical-interventions).
+
+[Intervalo serial]{#serialinterval}
+: O intervalo de tempo entre o início dos sintomas de um caso primário e de um caso secundário.
+Ele pode ser negativo quando ocorre infecção pré-sintomática.
+Mais frequentemente, a distribuição do intervalo serial de uma infecção é usada para estimar a distribuição do [tempo de geração](#generationtime) ([(Cori et al., 2017)](https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371)).
+A relação entre o intervalo serial e o [período de incubação](#incubation) ajuda a definir o tipo de transmissão da infecção (sintomática ou pré-sintomática) ([Nishiura et al. (2020)](https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2)).
+
+<!-- ## J -->
+
+<!-- ## K -->
+
+<!-- ## L -->
+
+## M
+
+[Matriz de contato]{#contact}
+: A matriz de contato é uma matriz quadrada composta por linhas e colunas iguais ao número de faixas etárias. Cada elemento representa a frequência de contatos entre faixas etárias. Se considerarmos que a transmissão de uma infecção é impulsionada pelo contato e que as taxas de contato são muito diferentes para diferentes faixas etárias, especificar uma matriz de contato nos permite levar em conta taxas de transmissão específicas por idade. 
+
+[Modelo determinístico]{#deterministic}
+: Modelos que sempre terão a mesma trajetória para determinadas condições iniciais e valores de parâmetros. Exemplos incluem equações diferenciais ordinárias e equações de diferenças. 
+
+[Modelo estocástico]{#stochastic}
+: Um modelo que inclui algum processo estocástico, resultando em variação nas simulações do modelo para as mesmas condições iniciais e valores de parâmetros. Exemplos incluem equações diferenciais estocásticas e modelos de processos de ramificação. Para mais detalhes, veja [Allen (2017)](https://doi.org/10.1016/j.idm.2017.03.001).
+
+## N
+
+[Número de reprodução básico]{#basic}
+: Uma medida da transmissibilidade de uma doença. Definido como o número médio de casos secundários gerados a partir de um caso infectado inicial em uma população inteiramente suscetível. [Mais informações sobre o número de reprodução básico](https://en.wikipedia.org/wiki/Basic_reproduction_number).  
+
+[Número de reprodução efetivo]{#effectiverepro}
+: O número de reprodução variante no tempo ou efetivo ($R_t$) é semelhante ao [número de reprodução básico](#basic) ($R_0$), mas o $R_t$ mede o número de pessoas infectadas por pessoa infecciosa quando parte da população já foi infectada. Leia mais sobre a [etimologia do número de reprodução em Sharma et al., 2023](https://wwwnc.cdc.gov/eid/article/29/8/22-1445_article).
+
+<!-- ## O -->
+
+## P
+
+[Parâmetros do modelo (EDOs)]{#parsode}
+: Os parâmetros do modelo são usados em modelos de [equações diferenciais ordinárias](#ordinary) para descrever o fluxo entre estados da doença. Por exemplo, uma taxa de transmissão $\beta$ é um parâmetro do modelo que pode ser usado para descrever o fluxo entre os estados suscetível e infeccioso. 
+
+[Período de incubação]{#incubation}
+: O tempo entre ser infectado e o início dos sintomas. 
+[Mais informações sobre o período de incubação](https://en.wikipedia.org/wiki/Latent_period_(epidemiology)#Incubation_period). 
+Ele pode ser diferente do [período latente](#latent), como mostrado na Figura 4 de ([Xiang et al. (2021)](https://www.sciencedirect.com/science/article/pii/S2468042721000038#fig4)).
+A relação entre o período de incubação e o [intervalo serial](#serialinterval) ajuda a definir o tipo de transmissão da infecção (sintomática ou pré-sintomática) ([Nishiura et al. (2020)](https://www.ijidonline.com/article/S1201-9712(20)30119-3/fulltext#gr2)).
+
+[Período de infecciosidade]{#infectiousness}
+: Também conhecido como duração da infecciosidade. Período de tempo entre o início e o fim da [eliminação viral](#viralshedding) infecciosa. 
+A carga viral e a detecção de vírus infeccioso são os dois parâmetros fundamentais para estimar a infecciosidade ([Puhach et al., 2022](https://www.nature.com/articles/s41579-022-00822-w) e [Hakki et al., 2022](https://www.thelancet.com/journals/lanres/article/PIIS2213-2600(22)00226-0/fulltext)](img/infectiousness-covid19.jpg)).
+
+[Período latente]{#latent}
+: O tempo entre ser infectado e o início da infecciosidade. 
+Ele pode ser diferente do [período de incubação](#incubation), como mostrado na Figura 4 de ([Xiang et al., 2021](https://www.sciencedirect.com/science/article/pii/S2468042721000038#fig4)).
+
+[Predição]{#prediction}
+: Equivalente a previsão (exceto no sentido estatístico, em que predições podem se referir a quaisquer dados não observados, inclusive do passado).
+
+[Previsão]{#forecast}
+: Uma declaração sobre o futuro, isto é, informando probabilidades previstas para desfechos futuros (em uma previsão determinística, essa probabilidade = 1).
+
+[Projeção]{#projection}
+: O mesmo que "simulação", isto é, um modelo projetado para o futuro; muitas vezes, mas não necessariamente sempre, assumindo que as condições permanecerão as mesmas. Uma projeção pode ser usada como uma previsão.
+
+<!-- ## Q -->
+
+<!-- ## R -->
+
+<!-- ## S -->
+
+## T
+
+[Taxa de crescimento]{#growth}
+: A taxa de crescimento exponencial indica o quanto os casos estão aumentando ou diminuindo no início de uma epidemia. Ela nos fornece uma medida da velocidade de transmissão, veja [Dushoff & Park, 2021](https://royalsocietypublishing.org/doi/full/10.1098/rspb.2020.1556).
+
+[Tempo de geração]{#generationtime}
+: Tempo entre o início da infecciosidade de um caso primário e de seu caso secundário. Esse valor sempre precisa ser positivo.
+A distribuição do tempo de geração é comumente estimada a partir de dados sobre a distribuição do [intervalo serial](#serialinterval) de uma infecção ([Cori et al. 2017](https://royalsocietypublishing.org/doi/10.1098/rstb.2016.0371)).
+
+<!-- This can produced biased estimates. ([Knight et al., 2020](https://www.sciencedirect.com/science/article/pii/S2468042720300634)) -->
+
+[Transmissão direta]{#direct}
+: Indivíduos são infectados por meio do contato direto com outros humanos infectados. Infecções transmitidas por via aérea são frequentemente modeladas como infecções de transmissão direta, pois exigem contato próximo com indivíduos infectados para que ocorra a transmissão. 
+
+[Transmissão indireta]{#indirect}
+: Infecções transmitidas indiretamente são passadas para humanos por meio do contato com vetores, animais ou ambiente contaminado. Infecções transmitidas por vetores, zoonoses e infecções de veiculação hídrica são modeladas como indiretamente transmitidas. 
+
+[Transmissão por vetores]{#vectorborne}
+: Transmissão por vetores significa que uma infecção pode ser transmitida de um vetor (por exemplo, mosquitos) para humanos. Exemplos de doenças transmitidas por vetores incluem malária e dengue. A Organização Mundial da Saúde possui uma [ficha informativa sobre doenças transmitidas por vetores](https://www.who.int/news-room/fact-sheets/detail/vector-borne-diseases) com informações essenciais e uma lista delas de acordo com o vetor.
+
+[Transmissão por via aérea]{#airborne}
+: Indivíduos são infectados por meio do contato com partículas infecciosas no ar. Exemplos incluem influenza e COVID-19. Atler et al. (2023) discutem os [fatores e procedimentos de manejo](https://www.ncbi.nlm.nih.gov/books/NBK531468/) da transmissão por via aérea.
+
+[Truncamento (à direita)]{#truncation}
+: Tipo de viés de amostragem relacionado ao processo de coleta de dados. Ocorre porque apenas casos que já foram notificados podem ser observados. Não levar em conta o truncamento à direita durante a fase de crescimento de uma epidemia pode levar à subestimação do atraso médio ([Park et al., em andamento](https://github.com/parksw3/epidist-paper)).
+
+<!-- ## U -->
+
+## V
+
+[Variáveis de estado]{#state}
+: As variáveis de estado em um modelo representado por [equações diferenciais ordinárias](#ordinary) são os estados da doença nos quais os indivíduos podem estar; por exemplo, se os indivíduos puderem estar suscetíveis, infecciosos ou recuperados, as variáveis de estado serão $S$, $I$ e $R$. Há uma equação diferencial ordinária para cada variável de estado. 
+
+[Viés de fase (dinâmica ou epidêmica)]{#phasebias}
+: Leva em conta a suscetibilidade da população nos momentos em que os pares de transmissão são observados.
+É um tipo de viés de amostragem. Afeta dados retrospectivos e está relacionado à fase da epidemia: durante a fase de crescimento exponencial, os casos que desenvolveram sintomas recentemente estão sobrerrepresentados nos dados observados, enquanto durante a fase de declínio, esses casos estão sub-representados, levando à estimativa de intervalos de atraso mais curtos e mais longos, respectivamente. ([Park et al., em andamento](https://github.com/parksw3/epidist-paper)).
+
+<!-- ## W -->
+
+<!-- ## X -->
+
+<!-- ## Y -->
+
+<!-- ## Z -->
