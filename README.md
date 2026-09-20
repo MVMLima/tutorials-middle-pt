@@ -44,12 +44,24 @@ quarto render
 O site sai em `_site/`. Para pré-visualizar com recarregamento automático: `quarto preview`.
 
 O `_quarto.yml` usa `execute: freeze: auto`, então os resultados dos blocos de código ficam
-guardados em `_freeze/` e o build no GitHub Actions **não precisa do R nem dos pacotes**. Se
-você alterar o **código** de um `.qmd`, renderize localmente de novo e commite o `_freeze/`
-atualizado junto com o arquivo.
+guardados em `_freeze/` e o build no GitHub Actions **não precisa do R nem dos pacotes**.
+
+> **Regra que evita publicar conteúdo velho.** O CI usa `freeze: true`, que reaproveita o resultado
+> congelado e **não regenera o HTML de um arquivo cujo `.qmd` mudou**. Se você editar qualquer
+> coisa — inclusive só o texto — e der push sem renderizar, o CI fica verde e a página no ar
+> continua a antiga. Por isso, depois de qualquer edição:
+>
+> ```bash
+> quarto render && python3 scripts/freshness.py --update
+> git add -A && git commit -m "..." && git push
+> ```
+>
+> O CI roda `scripts/freshness.py --check` antes de publicar e **falha** se algum `.qmd` estiver
+> mais novo que o último render local, dizendo qual arquivo e o que rodar.
 
 > **Tempo de execução:** os episódios que rodam `EpiNow2::epinow()` fazem inferência bayesiana por
-> MCMC. Espere alguns minutos por ajuste; o render completo é demorado por isso.
+> MCMC. Espere alguns minutos por ajuste; o render completo é demorado por isso. Arquivos que não
+> mudaram não são re-executados.
 
 ## Publicação
 
