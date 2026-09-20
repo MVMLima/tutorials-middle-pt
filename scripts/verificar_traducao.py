@@ -16,6 +16,7 @@ Uso: python3 scripts/verificar_traducao.py
 import pathlib
 import re
 import sys
+import difflib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PARES = [
@@ -38,7 +39,7 @@ PARES = [
 
 # Linhas extras no bloco de código do PT que são correções documentadas do material original
 # (registradas em licenca.qmd). Qualquer outra diferença continua sendo erro.
-ADICOES_DOCUMENTADAS = set()
+ADICOES_DOCUMENTADAS = {"sudo apt install libglpk40"}
 
 # arquivos cujo texto legitimamente contém muitos termos em inglês (heurística desligada)
 SEM_HEURISTICA = {"glossario.qmd", "setup.qmd"}
@@ -79,25 +80,34 @@ def checar(en_rel: str, pt_rel: str) -> list:
     en_txt = en_p.read_text(encoding="utf-8")
     pt_txt = pt_p.read_text(encoding="utf-8")
 
-    # 1. código
+    # 1. código — alinhamento por conteúdo (difflib), não por índice, para que
+    #    blocos novos documentados (caixas desta adaptação) não desloquem a comparação
     en_blocos, pt_blocos = blocos_codigo(en_txt), blocos_codigo(pt_txt)
-    if len(en_blocos) != len(pt_blocos):
-        problemas.append(f"blocos de código: EN={len(en_blocos)} PT={len(pt_blocos)}")
-    for i, (a, b) in enumerate(zip(en_blocos, pt_blocos), start=1):
-        na, nb = normalizar(a).split("\n"), normalizar(b).split("\n")
-        if na == nb:
+    en_norm = [normalizar(b) for b in en_blocos]
+    pt_norm = [normalizar(b) for b in pt_blocos]
+    sm = difflib.SequenceMatcher(a=en_norm, b=pt_norm, autojunk=False)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
             continue
-        so_en = [x for x in na if x not in nb]
-        so_pt = [x for x in nb if x not in na]
-        if not so_en and so_pt and all(any(y in x for y in ADICOES_DOCUMENTADAS) for x in so_pt):
+        if tag == "insert":
+            for j in range(j1, j2):
+                so_pt = [x for x in pt_norm[j].split("\n") if x]
+                if so_pt and all(any(y in x for y in ADICOES_DOCUMENTADAS) for x in so_pt):
+                    continue
+                problemas.append(f"bloco de código {j + 1} só existe no PT "
+                                 f"(não é adição documentada): {so_pt[:1]}")
             continue
-        problemas.append(f"bloco de código {i} diferente do original")
-        for la, lb in zip(na, nb):
-            if la != lb:
-                problemas.append(f"    EN: {la[:110]}\n    PT: {lb[:110]}")
-                break
-        for extra in so_pt[:2]:
-            problemas.append(f"    (linha só no PT: {extra[:100]})")
+        if tag in ("delete", "replace"):
+            for i in range(i1, i2):
+                problemas.append(f"bloco de código {i + 1} do original não tem equivalente no PT")
+            for j in range(j1, j2):
+                na = en_norm[i1].split("\n") if i1 < len(en_norm) else []
+                nb = pt_norm[j].split("\n")
+                problemas.append(f"bloco de código {j + 1} diferente do original")
+                for la, lb in zip(na, nb):
+                    if la != lb:
+                        problemas.append(f"    EN: {la[:110]}\n    PT: {lb[:110]}")
+                        break
 
     # 2. cercas de código
     for nome, txt in (("EN", en_txt), ("PT", pt_txt)):
@@ -129,6 +139,22 @@ def checar(en_rel: str, pt_rel: str) -> list:
     # 6. parágrafos que continuam em inglês
     if pt_rel in SEM_HEURISTICA:
         return problemas
+
+    # linhas dentro de comentários HTML não são renderizadas: não entram na heurística
+    em_comentario, dentro_comentario = set(), False
+    for n, linha in enumerate(pt_txt.split("\n"), 1):
+        if "<!--" in linha and "-->" not in linha:
+            dentro_comentario = True
+            em_comentario.add(n)
+            continue
+        if dentro_comentario:
+            em_comentario.add(n)
+            if "-->" in linha:
+                dentro_comentario = False
+            continue
+        if "<!--" in linha and "-->" in linha:
+            em_comentario.add(n)
+
     en_words = re.compile(
         r"\b(the|and|of|with|from|that|this|which|are|is|you can|we can|"
         r"should be|data set|column names|outbreak|dataset)\b", re.I)
@@ -137,10 +163,12 @@ def checar(en_rel: str, pt_rel: str) -> list:
         if linha.startswith("```"):
             dentro = not dentro
             continue
-        if dentro or len(linha) < 60:
+        if dentro or len(linha) < 60 or n in em_comentario:
             continue
         limpa = re.sub(r"\(\*[^*]*\*\)", "", linha)
-        limpa = re.sub(r"`[^`]*`", "", limpa)          # nomes de função/pacote
+        limpa = re.sub(r"\*\*[^*]+\*\*", "", limpa)        # negrito: nomes próprios e rótulos
+        limpa = re.sub(r"\*[^*]+\*", "", limpa)            # itálico: idem
+        limpa = re.sub(r"`[^`]*`", "", limpa)              # nomes de função/pacote
         limpa = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", limpa)  # alvos de link
         palavras = len(re.findall(r"\w+", limpa))
         if palavras and len(en_words.findall(limpa)) / palavras > 0.10:

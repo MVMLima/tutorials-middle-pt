@@ -7,6 +7,15 @@ library(webshot)
 webshot::install_phantomjs(force = TRUE)
 ```
 
+::: {.callout-note title="Dois arquivos que este episódio cria na pasta do projeto"}
+
+Ao renderizar este episódio, o `{webshot}` renderiza o grafo interativo em imagem e deixa dois
+arquivos na raiz do projeto: `network.html` (o grafo navegável) e `webshot.png` (a imagem usada no
+texto). Eles são **efeito colateral** do render, não material do curso — estão no `.gitignore`. A
+primeira execução também baixa o PhantomJS, o que exige conexão com a internet.
+
+:::
+
 ::: {.callout-note title="Perguntas"}
 
 - Como podemos estimar a variação na transmissão em nível individual (ou seja, o potencial de superspreading) a partir de dados de rastreamento de contatos?
